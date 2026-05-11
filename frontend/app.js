@@ -1,5 +1,22 @@
-const ISRAEL_CENTER = [34.85, 31.5];
-const ISRAEL_BOUNDS = [[33.8, 29.3], [36.0, 33.5]];
+const ISRAEL_CENTER = [34.95, 31.5];
+// Click-valid region (rough Israel bbox)
+const ISRAEL_CLICK_BBOX = { minLng: 34.0, maxLng: 35.95, minLat: 29.3, maxLat: 33.4 };
+// Pan-allowed region (wider, for comfortable dragging)
+const PAN_BOUNDS = [[32.5, 27.5], [38.5, 34.8]];
+
+const SAT_STYLE = {
+  version: 8,
+  sources: {
+    esri_sat: {
+      type: "raster",
+      tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics",
+    },
+  },
+  layers: [{ id: "esri_sat", type: "raster", source: "esri_sat" }],
+};
 
 let map, state = {
   gameId: null, rounds: [], cursor: 0, totalScore: 0,
@@ -7,19 +24,41 @@ let map, state = {
 };
 
 async function init() {
-  const cfg = await fetch("/api/config").then(r => r.json());
-  const styleUrl = cfg.maptiler_key
-    ? `https://api.maptiler.com/maps/streets-v2/style.json?key=${cfg.maptiler_key}`
-    : "https://demotiles.maplibre.org/style.json";
-
   map = new maplibregl.Map({
     container: "map",
-    style: styleUrl,
+    style: SAT_STYLE,
     center: ISRAEL_CENTER,
-    zoom: 7,
+    zoom: 7.3,
     minZoom: 6,
-    maxBounds: ISRAEL_BOUNDS,
+    maxZoom: 18,
+    maxBounds: PAN_BOUNDS,
+    dragRotate: false,
+    pitchWithRotate: false,
   });
+
+  map.on("click", onMapClick);
+  document.getElementById("btn-start").onclick = startGame;
+  document.getElementById("btn-next").onclick = nextRound;
+  document.getElementById("btn-restart").onclick = startGame;
+}
+
+function insideIsrael(lng, lat) {
+  return lng >= ISRAEL_CLICK_BBOX.minLng && lng <= ISRAEL_CLICK_BBOX.maxLng
+      && lat >= ISRAEL_CLICK_BBOX.minLat && lat <= ISRAEL_CLICK_BBOX.maxLat;
+}
+
+function flashToast(msg) {
+  let t = document.getElementById("toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "toast";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(flashToast._h);
+  flashToast._h = setTimeout(() => t.classList.remove("show"), 1500);
+}
 
   map.on("click", onMapClick);
   document.getElementById("btn-start").onclick = startGame;
@@ -52,8 +91,12 @@ async function loadRound() {
 
 async function onMapClick(e) {
   if (!state.awaitingClick) return;
-  state.awaitingClick = false;
   const { lng, lat } = e.lngLat;
+  if (!insideIsrael(lng, lat)) {
+    flashToast("Click inside Israel");
+    return;
+  }
+  state.awaitingClick = false;
   const id = state.rounds[state.cursor];
 
   state.guessMarker = new maplibregl.Marker({ color: "#f56565" })
@@ -110,7 +153,7 @@ function nextRound() {
     state.cursor++;
     showCard(null);
     loadRound();
-    map.flyTo({ center: ISRAEL_CENTER, zoom: 7, duration: 800 });
+    map.flyTo({ center: ISRAEL_CENTER, zoom: 7.3, duration: 800 });
   }
 }
 

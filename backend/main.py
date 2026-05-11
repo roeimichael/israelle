@@ -1,7 +1,5 @@
-import os
 from pathlib import Path
 
-from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -9,9 +7,6 @@ from pydantic import BaseModel
 
 from . import game_state, places
 from .scoring import haversine_km, score_from_distance
-
-load_dotenv()
-MAPTILER_KEY = os.getenv("MAPTILER_API_KEY", "")
 
 app = FastAPI(title="israelle")
 
@@ -22,11 +17,6 @@ class GuessIn(BaseModel):
     game_id: str
     lat: float
     lon: float
-
-
-@app.get("/api/config")
-def config():
-    return {"maptiler_key": MAPTILER_KEY}
 
 
 @app.post("/api/game/new")

@@ -42,3 +42,15 @@ button:hover { background: #5fe6d8; }
 #reveal-place { font-size: 18px; margin: 8px 0; font-weight: 600; }
 #reveal-dist { opacity: 0.7; font-size: 14px; }
 #final-score { font-size: 64px; font-weight: 700; color: #4fd1c5; margin: 12px 0; }
+
+#toast {
+  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: rgba(245, 101, 101, 0.95); color: #fff; padding: 10px 22px;
+  border-radius: 8px; font-weight: 600; font-size: 14px;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+  z-index: 20;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Hide MapLibre attribution clutter, keep concise */
+.maplibregl-ctrl-attrib { font-size: 10px; opacity: 0.6; }
