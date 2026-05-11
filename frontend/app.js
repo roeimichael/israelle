@@ -19,7 +19,7 @@ const SAT_STYLE = {
 };
 
 let map, state = {
-  gameId: null, rounds: [], cursor: 0, totalScore: 0,
+  gameId: null, rounds: [], cursor: 0, totalScore: 0, difficulty: "medium",
   awaitingClick: false, truthMarker: null, guessMarker: null, lineId: null,
 };
 
@@ -37,9 +37,11 @@ async function init() {
   });
 
   map.on("click", onMapClick);
-  document.getElementById("btn-start").onclick = startGame;
+  for (const b of document.querySelectorAll(".diff-btn")) {
+    b.onclick = () => startGame(b.dataset.diff);
+  }
   document.getElementById("btn-next").onclick = nextRound;
-  document.getElementById("btn-restart").onclick = startGame;
+  document.getElementById("btn-restart").onclick = () => startGame(state.difficulty);
 }
 
 function insideIsrael(lng, lat) {
@@ -60,11 +62,12 @@ function flashToast(msg) {
   flashToast._h = setTimeout(() => t.classList.remove("show"), 1500);
 }
 
-async function startGame() {
+async function startGame(difficulty) {
   clearMarkers();
   state.totalScore = 0;
   state.cursor = 0;
-  const g = await fetch("/api/game/new", { method: "POST" }).then(r => r.json());
+  state.difficulty = difficulty || state.difficulty;
+  const g = await fetch(`/api/game/new?difficulty=${state.difficulty}`, { method: "POST" }).then(r => r.json());
   state.gameId = g.game_id;
   state.rounds = g.rounds;
   showCard(null);
@@ -77,7 +80,7 @@ async function loadRound() {
   document.getElementById("place-name-en").textContent = r.name_en;
   document.getElementById("place-name-he").textContent = r.name_he;
   document.getElementById("place-type").textContent = r.type;
-  document.getElementById("round-num").textContent = `Round ${state.cursor + 1} / 5`;
+  document.getElementById("round-num").textContent = `${state.difficulty} · Round ${state.cursor + 1} / 5`;
   document.getElementById("round-score").textContent = `Score: ${state.totalScore}`;
   document.getElementById("hud").classList.remove("hidden");
   state.awaitingClick = true;
@@ -142,6 +145,7 @@ function nextRound() {
   clearMarkers();
   if (state._done) {
     document.getElementById("final-score").textContent = state.totalScore;
+    document.getElementById("final-diff").textContent = `${state.difficulty} mode`;
     showCard("end-card");
   } else {
     state.cursor++;

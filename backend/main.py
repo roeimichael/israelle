@@ -20,10 +20,12 @@ class GuessIn(BaseModel):
 
 
 @app.post("/api/game/new")
-def new_game():
-    round_ids = places.sample_round_ids(5)
+def new_game(difficulty: str = "medium"):
+    if difficulty not in places.DIFFICULTY_TYPES:
+        raise HTTPException(400, f"bad difficulty: {difficulty}")
+    round_ids = places.sample_round_ids(5, difficulty)
     gid = game_state.create(round_ids)
-    return {"game_id": gid, "rounds": round_ids}
+    return {"game_id": gid, "rounds": round_ids, "difficulty": difficulty}
 
 
 @app.get("/api/round/{round_id}")

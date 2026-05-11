@@ -22,15 +22,28 @@ def _load() -> dict[int, dict]:
 
 
 PLACES: dict[int, dict] = _load()
-_IDS = list(PLACES.keys())
-_WEIGHTS = [PLACES[i]["importance"] ** 2 for i in _IDS]  # square = sharpen
+
+DIFFICULTY_TYPES = {
+    "easy":   {"city", "town"},
+    "medium": {"city", "town", "village", "hamlet", "mountain"},
+    "hard":   None,  # all types
+}
 
 
-def sample_round_ids(n: int = 5) -> list[int]:
+def _pool(difficulty: str) -> list[int]:
+    allowed = DIFFICULTY_TYPES.get(difficulty, None)
+    if allowed is None:
+        return list(PLACES.keys())
+    return [pid for pid, p in PLACES.items() if p["type"] in allowed]
+
+
+def sample_round_ids(n: int = 5, difficulty: str = "medium") -> list[int]:
     """Weighted-random sample without replacement, biased to important places."""
+    ids = _pool(difficulty)
+    if len(ids) < n:
+        raise ValueError(f"not enough places for difficulty={difficulty}")
+    weights = [PLACES[i]["importance"] ** 2 for i in ids]
     chosen: list[int] = []
-    ids = _IDS.copy()
-    weights = _WEIGHTS.copy()
     for _ in range(n):
         i = random.choices(range(len(ids)), weights=weights, k=1)[0]
         chosen.append(ids[i])
