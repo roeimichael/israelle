@@ -21,7 +21,7 @@ class GuessIn(BaseModel):
 
 @app.post("/api/game/new")
 def new_game():
-    round_ids = places.sample_round_ids(5)
+    round_ids = places.sample_round_ids()
     gid = game_state.create(round_ids)
     return {"game_id": gid, "rounds": round_ids}
 
@@ -60,6 +60,7 @@ def post_guess(round_id: int, body: GuessIn):
         "round_score": round_score,
         "true_lat": p["lat"],
         "true_lon": p["lon"],
+        "polygon": places.get_polygon(round_id),
         "round_number": rn,
         "total_score": total,
         "done": done,

@@ -1,8 +1,14 @@
 import csv
+import json
 import random
 from pathlib import Path
 
 CSV_PATH = Path(__file__).parent.parent / "data" / "places.csv"
+POLY_PATH = Path(__file__).parent.parent / "data" / "polygons.json"
+
+POLYGONS: dict[str, dict] = (
+    json.loads(POLY_PATH.read_text(encoding="utf-8")) if POLY_PATH.exists() else {}
+)
 
 
 def _load() -> dict[int, dict]:
@@ -22,12 +28,13 @@ def _load() -> dict[int, dict]:
 
 
 def _category(place_type: str) -> tuple[str, int]:
-    """Return (category_label, multiplier)."""
+    """Return (category_label, multiplier). Mults sum to 1000 in a fixed-mix game:
+    2×city (1×) + 2×settlement (2×) + 1×landmark (4×) = 200 + 400 + 400 = 1000."""
     if place_type == "city":
         return ("city", 1)
     if place_type == "village":
         return ("settlement", 2)
-    return ("landmark", 3)
+    return ("landmark", 4)
 
 
 PLACES: dict[int, dict] = _load()
@@ -37,18 +44,37 @@ for _p in PLACES.values():
     _p["multiplier"] = mult
 
 
-def sample_round_ids(n: int = 5) -> list[int]:
-    """Weighted-random sample without replacement, biased to important places."""
-    ids = list(PLACES.keys())
-    weights = [PLACES[i]["importance"] ** 2 for i in ids]
+# Fixed composition: every game draws exactly this many of each category.
+GAME_COMPOSITION = [("city", 2), ("settlement", 2), ("landmark", 1)]
+
+
+def _weighted_sample(ids: list[int], k: int) -> list[int]:
+    """k distinct ids, biased to higher importance."""
+    pool = ids[:]
+    weights = [PLACES[i]["importance"] ** 2 for i in pool]
+    out: list[int] = []
+    for _ in range(k):
+        i = random.choices(range(len(pool)), weights=weights, k=1)[0]
+        out.append(pool[i])
+        pool.pop(i); weights.pop(i)
+    return out
+
+
+def sample_round_ids() -> list[int]:
+    """Fixed-composition draw, then shuffled order of presentation."""
     chosen: list[int] = []
-    for _ in range(n):
-        i = random.choices(range(len(ids)), weights=weights, k=1)[0]
-        chosen.append(ids[i])
-        ids.pop(i)
-        weights.pop(i)
+    by_cat: dict[str, list[int]] = {"city": [], "settlement": [], "landmark": []}
+    for pid, p in PLACES.items():
+        by_cat[p["category"]].append(pid)
+    for cat, n in GAME_COMPOSITION:
+        chosen.extend(_weighted_sample(by_cat[cat], n))
+    random.shuffle(chosen)
     return chosen
 
 
 def get(round_id: int) -> dict | None:
     return PLACES.get(round_id)
+
+
+def get_polygon(round_id: int) -> dict | None:
+    return POLYGONS.get(str(round_id))

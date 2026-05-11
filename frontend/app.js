@@ -88,9 +88,15 @@ async function loadRound() {
 }
 
 function makeDot(cls) {
-  const el = document.createElement("div");
-  el.className = `marker-dot ${cls}`;
-  return el;
+  // Wrap is what MapLibre positions (it overwrites .style.transform every frame),
+  // inner dot owns the visual + animation so our transforms are not clobbered.
+  const wrap = document.createElement("div");
+  wrap.className = "marker-wrap";
+  wrap.innerHTML = `
+    <div class="marker-pulse ${cls}"></div>
+    <div class="marker-dot ${cls}"></div>
+  `;
+  return wrap;
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -118,22 +124,70 @@ async function onMapClick(e) {
   state.totalScore = res.total_score;
   const truthLngLat = [res.true_lon, res.true_lat];
 
-  // 2) fit both points smoothly
-  map.fitBounds(
-    [[Math.min(lng, res.true_lon), Math.min(lat, res.true_lat)],
-     [Math.max(lng, res.true_lon), Math.max(lat, res.true_lat)]],
-    { padding: 140, duration: 900 },
-  );
+  // 2) draw the polygon underneath (if available)
+  drawPolygon(res.polygon);
 
-  // 3) short beat, then truth dot pops in
+  // 3) fit bounds — include polygon if present, otherwise just the two points
+  const bbox = polygonBbox(res.polygon) ?? [
+    [Math.min(lng, res.true_lon), Math.min(lat, res.true_lat)],
+    [Math.max(lng, res.true_lon), Math.max(lat, res.true_lat)],
+  ];
+  // expand bbox to also include guess point
+  bbox[0][0] = Math.min(bbox[0][0], lng);
+  bbox[0][1] = Math.min(bbox[0][1], lat);
+  bbox[1][0] = Math.max(bbox[1][0], lng);
+  bbox[1][1] = Math.max(bbox[1][1], lat);
+  map.fitBounds(bbox, { padding: 140, duration: 900 });
+
+  // 4) short beat, then truth dot pops in
   await sleep(450);
   state.truthMarker = new maplibregl.Marker({ element: makeDot("truth") })
     .setLngLat(truthLngLat).addTo(map);
 
-  // 4) animate dashed line from guess → truth over 1.1s
+  // 5) animate dashed line from guess → truth over 1.1s
   await animateLine([lng, lat], truthLngLat, 1100);
 
   showReveal(res);
+}
+
+function polygonBbox(geom) {
+  if (!geom) return null;
+  const polys = geom.type === "Polygon" ? [geom.coordinates] : geom.coordinates;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const poly of polys) for (const ring of poly) for (const [x, y] of ring) {
+    if (x < minX) minX = x; if (y < minY) minY = y;
+    if (x > maxX) maxX = x; if (y > maxY) maxY = y;
+  }
+  return [[minX, minY], [maxX, maxY]];
+}
+
+function drawPolygon(geom) {
+  state.polyId = "truth-polygon";
+  if (map.getLayer(state.polyId + "-fill")) map.removeLayer(state.polyId + "-fill");
+  if (map.getLayer(state.polyId + "-line")) map.removeLayer(state.polyId + "-line");
+  if (map.getSource(state.polyId)) map.removeSource(state.polyId);
+  if (!geom) return;
+  map.addSource(state.polyId, {
+    type: "geojson",
+    data: { type: "Feature", geometry: geom, properties: {} },
+  });
+  map.addLayer({
+    id: state.polyId + "-fill",
+    type: "fill",
+    source: state.polyId,
+    paint: { "fill-color": "#4d7df0", "fill-opacity": 0.22 },
+  });
+  map.addLayer({
+    id: state.polyId + "-line",
+    type: "line",
+    source: state.polyId,
+    paint: {
+      "line-color": "#4d7df0",
+      "line-width": 2.5,
+      "line-opacity": 0.95,
+      "line-blur": 0.3,
+    },
+  });
 }
 
 function animateLine(from, to, durationMs) {
