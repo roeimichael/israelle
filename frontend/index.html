@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Israelle — guess places in Israel</title>
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+<link href="/static/style.css" rel="stylesheet" />
+</head>
+<body>
+<div id="map"></div>
+
+<div id="hud" class="hidden">
+  <div id="round-info">
+    <span id="round-num"></span>
+    <span id="round-score"></span>
+  </div>
+  <div id="prompt">
+    Where is <span id="place-name-en"></span>
+    <span id="place-name-he" dir="rtl"></span>?
+    <div id="place-type"></div>
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="start-card" class="card">
+    <h1>Israelle</h1>
+    <p>5 rounds. Click the map where you think the place is.<br/>Closer = more points (max 100/round).</p>
+    <button id="btn-start">Play</button>
+  </div>
+
+  <div id="reveal-card" class="card hidden">
+    <h2 id="reveal-score"></h2>
+    <div id="reveal-place"></div>
+    <div id="reveal-dist"></div>
+    <button id="btn-next">Next →</button>
+  </div>
+
+  <div id="end-card" class="card hidden">
+    <h1>Final score</h1>
+    <div id="final-score"></div>
+    <button id="btn-restart">Play again</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

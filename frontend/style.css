@@ -1,0 +1,44 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+body { background: #0c1014; color: #f0f0f0; }
+.hidden { display: none !important; }
+
+#map { position: absolute; inset: 0; }
+
+#hud {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+  background: rgba(15,18,22,0.92); color: #fff; padding: 14px 22px;
+  border-radius: 12px; box-shadow: 0 4px 18px rgba(0,0,0,0.4);
+  z-index: 5; text-align: center; max-width: 90vw;
+  backdrop-filter: blur(8px);
+}
+#round-info { font-size: 13px; opacity: 0.7; display: flex; justify-content: space-between; gap: 18px; }
+#prompt { font-size: 20px; font-weight: 600; margin-top: 4px; }
+#place-name-he { font-weight: 700; margin: 0 4px; }
+#place-type { font-size: 13px; opacity: 0.6; font-weight: 400; text-transform: capitalize; margin-top: 2px; }
+
+#overlay {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(8,10,14,0.55); z-index: 10; pointer-events: auto;
+}
+#overlay.pass-through { pointer-events: none; background: transparent; }
+#overlay.pass-through .card { pointer-events: auto; }
+
+.card {
+  background: #1a1f26; padding: 28px 32px; border-radius: 14px;
+  text-align: center; min-width: 280px; max-width: 420px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+}
+.card h1 { margin: 0 0 8px; }
+.card h2 { margin: 0 0 12px; font-size: 36px; color: #4fd1c5; }
+.card p { opacity: 0.8; }
+button {
+  background: #4fd1c5; color: #0c1014; border: none; padding: 12px 28px;
+  font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer; margin-top: 14px;
+}
+button:hover { background: #5fe6d8; }
+
+#reveal-card { min-width: 320px; }
+#reveal-place { font-size: 18px; margin: 8px 0; font-weight: 600; }
+#reveal-dist { opacity: 0.7; font-size: 14px; }
+#final-score { font-size: 64px; font-weight: 700; color: #4fd1c5; margin: 12px 0; }
