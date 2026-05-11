@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from . import game_state, places
-from .scoring import haversine_km, score_from_distance
+from .scoring import base_score, haversine_km
 
 app = FastAPI(title="israelle")
 
@@ -20,12 +20,10 @@ class GuessIn(BaseModel):
 
 
 @app.post("/api/game/new")
-def new_game(difficulty: str = "medium"):
-    if difficulty not in places.DIFFICULTY_TYPES:
-        raise HTTPException(400, f"bad difficulty: {difficulty}")
-    round_ids = places.sample_round_ids(5, difficulty)
+def new_game():
+    round_ids = places.sample_round_ids(5)
     gid = game_state.create(round_ids)
-    return {"game_id": gid, "rounds": round_ids, "difficulty": difficulty}
+    return {"game_id": gid, "rounds": round_ids}
 
 
 @app.get("/api/round/{round_id}")
@@ -33,7 +31,10 @@ def get_round(round_id: int):
     p = places.get(round_id)
     if not p:
         raise HTTPException(404, "unknown round")
-    return {"name_en": p["name_en"], "name_he": p["name_he"], "type": p["type"]}
+    return {
+        "name_en": p["name_en"], "name_he": p["name_he"], "type": p["type"],
+        "category": p["category"], "multiplier": p["multiplier"],
+    }
 
 
 @app.post("/api/round/{round_id}/guess")
@@ -49,11 +50,14 @@ def post_guess(round_id: int, body: GuessIn):
     if not p:
         raise HTTPException(404, "unknown round")
     dist = haversine_km(body.lat, body.lon, p["lat"], p["lon"])
-    score = score_from_distance(dist)
-    rn, total, done = game_state.record_guess(body.game_id, round_id, score)
+    base = base_score(dist)
+    round_score = base * p["multiplier"]
+    rn, total, done = game_state.record_guess(body.game_id, round_id, round_score)
     return {
         "distance_km": round(dist, 2),
-        "score": score,
+        "base_score": base,
+        "multiplier": p["multiplier"],
+        "round_score": round_score,
         "true_lat": p["lat"],
         "true_lon": p["lon"],
         "round_number": rn,

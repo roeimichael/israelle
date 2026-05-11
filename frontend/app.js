@@ -19,7 +19,7 @@ const SAT_STYLE = {
 };
 
 let map, state = {
-  gameId: null, rounds: [], cursor: 0, totalScore: 0, difficulty: "medium",
+  gameId: null, rounds: [], cursor: 0, totalScore: 0, currentMult: 1,
   awaitingClick: false, truthMarker: null, guessMarker: null, lineId: null,
 };
 
@@ -37,11 +37,9 @@ async function init() {
   });
 
   map.on("click", onMapClick);
-  for (const b of document.querySelectorAll(".diff-btn")) {
-    b.onclick = () => startGame(b.dataset.diff);
-  }
+  document.getElementById("btn-start").onclick = startGame;
   document.getElementById("btn-next").onclick = nextRound;
-  document.getElementById("btn-restart").onclick = () => startGame(state.difficulty);
+  document.getElementById("btn-restart").onclick = startGame;
 }
 
 function insideIsrael(lng, lat) {
@@ -62,12 +60,11 @@ function flashToast(msg) {
   flashToast._h = setTimeout(() => t.classList.remove("show"), 1500);
 }
 
-async function startGame(difficulty) {
+async function startGame() {
   clearMarkers();
   state.totalScore = 0;
   state.cursor = 0;
-  state.difficulty = difficulty || state.difficulty;
-  const g = await fetch(`/api/game/new?difficulty=${state.difficulty}`, { method: "POST" }).then(r => r.json());
+  const g = await fetch("/api/game/new", { method: "POST" }).then(r => r.json());
   state.gameId = g.game_id;
   state.rounds = g.rounds;
   showCard(null);
@@ -77,10 +74,14 @@ async function startGame(difficulty) {
 async function loadRound() {
   const id = state.rounds[state.cursor];
   const r = await fetch(`/api/round/${id}`).then(r => r.json());
+  state.currentMult = r.multiplier;
   document.getElementById("place-name-en").textContent = r.name_en;
   document.getElementById("place-name-he").textContent = r.name_he;
-  document.getElementById("place-type").textContent = r.type;
-  document.getElementById("round-num").textContent = `${state.difficulty} · Round ${state.cursor + 1} / 5`;
+  document.getElementById("place-type").textContent = `${r.type} · ${r.category}`;
+  document.getElementById("round-num").textContent = `Round ${state.cursor + 1} / 5`;
+  const multEl = document.getElementById("round-mult");
+  multEl.textContent = `${r.multiplier}×`;
+  multEl.className = `mult m${r.multiplier}`;
   document.getElementById("round-score").textContent = `Score: ${state.totalScore}`;
   document.getElementById("hud").classList.remove("hidden");
   state.awaitingClick = true;
@@ -132,7 +133,9 @@ function drawLine(a, b) {
 
 function showReveal(res) {
   document.getElementById("hud").classList.add("hidden");
-  document.getElementById("reveal-score").textContent = `+${res.score}`;
+  document.getElementById("reveal-score").textContent = `+${res.round_score}`;
+  document.getElementById("reveal-breakdown").textContent =
+    `${res.base_score} × ${res.multiplier}`;
   document.getElementById("reveal-place").textContent =
     document.getElementById("place-name-en").textContent;
   document.getElementById("reveal-dist").textContent = `${res.distance_km} km away`;
@@ -145,7 +148,6 @@ function nextRound() {
   clearMarkers();
   if (state._done) {
     document.getElementById("final-score").textContent = state.totalScore;
-    document.getElementById("final-diff").textContent = `${state.difficulty} mode`;
     showCard("end-card");
   } else {
     state.cursor++;

@@ -13,6 +13,7 @@
 <div id="hud" class="hidden">
   <div id="round-info">
     <span id="round-num"></span>
+    <span id="round-mult"></span>
     <span id="round-score"></span>
   </div>
   <div id="prompt">
@@ -25,16 +26,18 @@
 <div id="overlay">
   <div id="start-card" class="card">
     <h1>Israelle</h1>
-    <p>5 rounds. Click the map where you think the place is.<br/>Closer = more points (max 100/round).</p>
-    <div class="diff-row">
-      <button class="diff-btn" data-diff="easy">Easy<small>cities</small></button>
-      <button class="diff-btn" data-diff="medium">Medium<small>+ settlements, mountains</small></button>
-      <button class="diff-btn" data-diff="hard">Hard<small>everything</small></button>
+    <p>5 rounds. Click the map where you think the place is.</p>
+    <div class="mult-legend">
+      <div><span class="m1">1×</span> cities</div>
+      <div><span class="m2">2×</span> settlements, villages, kibbutzim</div>
+      <div><span class="m3">3×</span> landmarks, mountains, ruins, museums…</div>
     </div>
+    <button id="btn-start">Play</button>
   </div>
 
   <div id="reveal-card" class="card hidden">
     <h2 id="reveal-score"></h2>
+    <div id="reveal-breakdown"></div>
     <div id="reveal-place"></div>
     <div id="reveal-dist"></div>
     <button id="btn-next">Next →</button>
@@ -43,7 +46,7 @@
   <div id="end-card" class="card hidden">
     <h1>Final score</h1>
     <div id="final-score"></div>
-    <div id="final-diff"></div>
+    <div id="final-max">out of 1500</div>
     <button id="btn-restart">Play again</button>
   </div>
 </div>

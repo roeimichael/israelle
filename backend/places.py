@@ -21,27 +21,25 @@ def _load() -> dict[int, dict]:
     return out
 
 
+def _category(place_type: str) -> tuple[str, int]:
+    """Return (category_label, multiplier)."""
+    if place_type == "city":
+        return ("city", 1)
+    if place_type == "village":
+        return ("settlement", 2)
+    return ("landmark", 3)
+
+
 PLACES: dict[int, dict] = _load()
-
-DIFFICULTY_TYPES = {
-    "easy":   {"city"},
-    "medium": {"city", "village", "mountain"},
-    "hard":   None,  # all types
-}
+for _p in PLACES.values():
+    cat, mult = _category(_p["type"])
+    _p["category"] = cat
+    _p["multiplier"] = mult
 
 
-def _pool(difficulty: str) -> list[int]:
-    allowed = DIFFICULTY_TYPES.get(difficulty, None)
-    if allowed is None:
-        return list(PLACES.keys())
-    return [pid for pid, p in PLACES.items() if p["type"] in allowed]
-
-
-def sample_round_ids(n: int = 5, difficulty: str = "medium") -> list[int]:
+def sample_round_ids(n: int = 5) -> list[int]:
     """Weighted-random sample without replacement, biased to important places."""
-    ids = _pool(difficulty)
-    if len(ids) < n:
-        raise ValueError(f"not enough places for difficulty={difficulty}")
+    ids = list(PLACES.keys())
     weights = [PLACES[i]["importance"] ** 2 for i in ids]
     chosen: list[int] = []
     for _ in range(n):
