@@ -59,13 +59,24 @@ uvicorn backend.main:app --host 127.0.0.1 --port 8123
 
 Open **http://127.0.0.1:8123** → click *Play*.
 
-### Share with friends (no deploy)
+### Share with friends — quick (your PC must stay on)
 
 ```bash
 cloudflared tunnel --url http://127.0.0.1:8123
 ```
 
-You get a public `*.trycloudflare.com` URL. No signup, no DNS, no cost.
+Public `*.trycloudflare.com` URL. No signup, no DNS, no cost. Dies when you close the terminal.
+
+### Deploy permanently — free Render hosting
+
+A `render.yaml` ships in the repo. To go live:
+
+1. Sign up at [render.com](https://render.com) (free, GitHub login)
+2. New → **Blueprint** → connect this repo
+3. Render reads `render.yaml`, builds, deploys
+4. You get `https://israelle.onrender.com` — share with anyone
+
+Free tier sleeps after 15 min idle (~30 s cold start on first hit). 750 h/mo runtime. Every `git push` to `main` redeploys automatically.
 
 ## Tech
 
