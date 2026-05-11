@@ -1,62 +1,110 @@
-# Israelle
+<div align="center">
 
-Wordle-style geography game for Israel. Map full-screen, popup asks "Where is X?", click → distance-based score. 5 rounds per game. Inspired by [maptap.gg](https://maptap.gg) but scoped to Israel only — cities, kibbutzim, mountains, archaeological sites, museums, monuments, nature reserves.
+# 🇮🇱 Israelle
 
-## Stack
-- **Backend**: Python 3.10 + FastAPI + uvicorn
-- **Frontend**: vanilla HTML/JS + MapLibre GL JS
-- **Data**: OpenStreetMap via Overpass API (one-time fetch → `data/places.csv`, ~4k places)
+**A Wordle-style geography game scoped to Israel.**
+Click the satellite map where you think the named place is. Close → big score. Wrong end of the country → nothing.
 
-## Setup
+![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
+![MapLibre](https://img.shields.io/badge/MapLibre%20GL-4.7-396CB1?logo=maplibre&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
+<img src="docs/homepage.png" alt="Israelle gameplay" width="780" />
+
+</div>
+
+---
+
+## How it works
+
+- 5 rounds per game, random places drawn from ~3.3k Israeli locations
+- Each round shows a place name in **English + Hebrew**; you click the satellite map
+- Score per round = `base × multiplier` (max **300**); total max **1500**
+- Inspired by [maptap.gg](https://maptap.gg), but the map is **just Israel** and the targets go beyond cities — kibbutzim, mountains, archaeological sites, museums, monuments, nature reserves…
+
+### Scoring
+
+Quadratic falloff — wrong-end-of-country guesses are basically worthless.
+
+| Distance | Base | Notes |
+|---:|---:|---|
+| 0–1 km | **100** | bullseye |
+| 10 km | 92 | close |
+| 50 km | 64 | wrong neighborhood |
+| 100 km | 36 | wrong region |
+| 200 km | 4 | trivial |
+| 250 km+ | **0** | giving up |
+
+Multiplier depends on the target:
+
+| Category | Multiplier | Examples |
+|---|:-:|---|
+| City | **1×** | Tel Aviv, Jerusalem, Haifa, Eilat |
+| Settlement | **2×** | villages, kibbutzim, moshavim |
+| Landmark | **3×** | mountains, museums, archaeological sites, monuments… |
+
+## Quick start
 
 ```bash
+git clone https://github.com/roeimichael/israelle
+cd israelle
 python -m venv .venv
-.venv/Scripts/activate          # Windows
-# source .venv/bin/activate     # macOS/Linux
+.venv/Scripts/activate            # Windows
+# source .venv/bin/activate       # macOS / Linux
 pip install -r requirements.txt
-cp .env.example .env             # add your MapTiler key (free at maptiler.com)
+
+uvicorn backend.main:app --host 127.0.0.1 --port 8123
 ```
 
-## Run
+Open **http://127.0.0.1:8123** → click *Play*.
 
-```bash
-uvicorn backend.main:app --host 127.0.0.1 --port 8123 --reload
-```
-
-Open http://127.0.0.1:8123 — without a MapTiler key the demo basemap is used (works but ugly).
-
-## Share with friends (Cloudflared tunnel)
+### Share with friends (no deploy)
 
 ```bash
 cloudflared tunnel --url http://127.0.0.1:8123
 ```
 
-Prints a public `*.trycloudflare.com` URL. Send to friends, no signup needed.
+You get a public `*.trycloudflare.com` URL. No signup, no DNS, no cost.
 
-## Rebuild place data
+## Tech
 
-Already-built `data/places.csv` ships in the repo. To refresh:
+| Layer | Choice | Why |
+|---|---|---|
+| Basemap | [Esri World Imagery](https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer) | Free satellite tiles, deep zoom (z19), no API key, no labels |
+| Map engine | [MapLibre GL JS](https://maplibre.org/) | Open-source, WebGL vector/raster rendering |
+| Backend | FastAPI + uvicorn | Async, schema-validated, ships static assets too |
+| Data | OpenStreetMap via [Overpass API](https://overpass-api.de) | One-shot fetch → committed CSV; no live deps |
 
-```bash
-python scripts/fetch_overpass.py   # ~30s, writes data/raw/overpass.json
-python scripts/build_places.py     # writes data/places.csv
+## Repo layout
+
 ```
-
-## Layout
-
-```
-backend/   FastAPI app, scoring, session state, CSV loader
-frontend/  index.html, app.js, style.css
-scripts/   one-time data fetch + merge
-data/      places.csv (committed)
+backend/        FastAPI app — routes, scoring, session state, CSV loader
+frontend/       index.html, app.js, style.css (vanilla, no build step)
+scripts/        one-time data ETL (Overpass fetch + merge)
+data/           places.csv (committed, ~3.3k entries)
+docs/           screenshots
 ```
 
 ## API
 
-- `POST /api/game/new` → `{game_id, rounds: [5 ids]}`
-- `GET /api/round/{id}` → `{name_en, name_he, type}` (no coords)
-- `POST /api/round/{id}/guess` body `{game_id, lat, lon}` → `{distance_km, score, true_lat, true_lon, round_number, total_score, done}`
+| Method | Path | Returns |
+|---|---|---|
+| `POST` | `/api/game/new` | `{game_id, rounds: [5 ids]}` |
+| `GET`  | `/api/round/{id}` | `{name_en, name_he, type, category, multiplier}` |
+| `POST` | `/api/round/{id}/guess` | `{distance_km, base_score, multiplier, round_score, true_lat, true_lon, round_number, total_score, done}` |
 
-## Scoring
+## Rebuilding the place data
 
-`score = round(max(0, 100 * (1 - distance_km / 470)))`, distance < 1 km → flat 100. 470 km ≈ Israel N–S diagonal.
+The shipped `data/places.csv` is enough to play. To refresh it from current OSM:
+
+```bash
+python scripts/fetch_overpass.py    # ~30s, writes data/raw/overpass.json
+python scripts/build_places.py      # cleans, merges, writes data/places.csv
+```
+
+## License
+
+MIT — see [LICENSE](LICENSE).
+
+Map data © OpenStreetMap contributors. Satellite imagery © Esri.
