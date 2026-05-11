@@ -37,9 +37,57 @@ async function init() {
   });
 
   map.on("click", onMapClick);
+  map.on("load", addIsraelMask);
+
   document.getElementById("btn-start").onclick = startGame;
   document.getElementById("btn-next").onclick = nextRound;
   document.getElementById("btn-restart").onclick = startGame;
+}
+
+async function addIsraelMask() {
+  const border = await fetch("/api/israel-border").then((r) => r.json());
+  const polys = border.geometry.type === "Polygon"
+    ? [border.geometry.coordinates[0]]
+    : border.geometry.coordinates.map((p) => p[0]);
+
+  // Mask: a single polygon whose outer ring is the world and whose holes
+  // are Israel's outer rings. Everything outside Israel renders as fill.
+  const worldRing = [[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]];
+  const maskCoords = [worldRing, ...polys];
+
+  map.addSource("il-mask", {
+    type: "geojson",
+    data: { type: "Feature", geometry: { type: "Polygon", coordinates: maskCoords } },
+  });
+  map.addLayer({
+    id: "il-mask-fill",
+    type: "fill",
+    source: "il-mask",
+    paint: { "fill-color": "#0a1424", "fill-opacity": 0.95 },
+  });
+
+  // Crisp white border on top
+  map.addSource("il-border", { type: "geojson", data: border });
+  map.addLayer({
+    id: "il-border-line",
+    type: "line",
+    source: "il-border",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": "#ffffff",
+      "line-width": 2.4,
+      "line-opacity": 0.85,
+      "line-blur": 0.3,
+    },
+  });
+  // Subtle outer glow
+  map.addLayer({
+    id: "il-border-glow",
+    type: "line",
+    source: "il-border",
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": "#4d7df0", "line-width": 6, "line-opacity": 0.25, "line-blur": 3 },
+  }, "il-border-line");
 }
 
 function insideIsrael(lng, lat) {
@@ -253,8 +301,19 @@ function showReveal(res) {
     document.getElementById("place-name-en").textContent;
   document.getElementById("reveal-dist").textContent = `${res.distance_km} km away`;
   document.getElementById("btn-next").textContent = res.done ? "See result" : "Next →";
+  // The round is over — polygon disappears with the reveal so it doesn't
+  // linger into next turn.
+  clearPolygon();
   showCard("reveal-card", true);
   state._done = res.done;
+}
+
+function clearPolygon() {
+  if (!state.polyId) return;
+  if (map.getLayer(state.polyId + "-fill")) map.removeLayer(state.polyId + "-fill");
+  if (map.getLayer(state.polyId + "-line")) map.removeLayer(state.polyId + "-line");
+  if (map.getSource(state.polyId)) map.removeSource(state.polyId);
+  state.polyId = null;
 }
 
 function nextRound() {

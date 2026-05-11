@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -11,12 +12,20 @@ from .scoring import base_score, haversine_km
 app = FastAPI(title="israelle")
 
 FRONTEND = Path(__file__).parent.parent / "frontend"
+DATA = Path(__file__).parent.parent / "data"
+
+ISRAEL_BORDER = json.loads((DATA / "israel.geojson").read_text(encoding="utf-8"))
 
 
 class GuessIn(BaseModel):
     game_id: str
     lat: float
     lon: float
+
+
+@app.get("/api/israel-border")
+def israel_border():
+    return ISRAEL_BORDER
 
 
 @app.post("/api/game/new")
