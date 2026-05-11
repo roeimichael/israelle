@@ -60,12 +60,6 @@ function flashToast(msg) {
   flashToast._h = setTimeout(() => t.classList.remove("show"), 1500);
 }
 
-  map.on("click", onMapClick);
-  document.getElementById("btn-start").onclick = startGame;
-  document.getElementById("btn-next").onclick = nextRound;
-  document.getElementById("btn-restart").onclick = startGame;
-}
-
 async function startGame() {
   clearMarkers();
   state.totalScore = 0;
