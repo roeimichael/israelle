@@ -1,70 +1,159 @@
+:root {
+  --il-blue: #0038b8;
+  --il-blue-light: #4d7df0;
+  --il-white: #ffffff;
+  --bg: #0c1014;
+  --bg-card: #161b22;
+  --bg-card-strong: #1f262f;
+  --text: #f0f0f0;
+  --text-dim: rgba(240, 240, 240, 0.65);
+  --guess: #f56565;
+  --truth: var(--il-blue-light);
+}
+
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-body { background: #0c1014; color: #f0f0f0; }
+html, body {
+  margin: 0; height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  color: var(--text);
+}
+body { background: var(--bg); }
 .hidden { display: none !important; }
 
 #map { position: absolute; inset: 0; }
 
+/* ─── HUD (top banner during play) ─── */
 #hud {
-  position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
-  background: rgba(15,18,22,0.92); color: #fff; padding: 14px 22px;
-  border-radius: 12px; box-shadow: 0 4px 18px rgba(0,0,0,0.4);
-  z-index: 5; text-align: center; max-width: 90vw;
-  backdrop-filter: blur(8px);
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  background: rgba(15, 18, 22, 0.88);
+  border: 1px solid rgba(77, 125, 240, 0.25);
+  padding: 12px 22px; border-radius: 14px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+  z-index: 5; text-align: center; max-width: 92vw;
+  backdrop-filter: blur(10px);
 }
-#round-info { font-size: 13px; opacity: 0.7; display: flex; justify-content: space-between; gap: 18px; }
-#prompt { font-size: 20px; font-weight: 600; margin-top: 4px; }
-#place-name-he { font-weight: 700; margin: 0 4px; }
-#place-type { font-size: 13px; opacity: 0.6; font-weight: 400; text-transform: capitalize; margin-top: 2px; }
+#round-info {
+  font-size: 12px; color: var(--text-dim);
+  display: flex; justify-content: center; align-items: center; gap: 14px;
+  margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+#prompt { font-size: 20px; font-weight: 600; }
+#place-name-he { font-weight: 700; margin: 0 6px; color: var(--il-blue-light); }
+#place-type {
+  font-size: 12px; opacity: 0.55; font-weight: 400;
+  text-transform: capitalize; margin-top: 3px; letter-spacing: 0.3px;
+}
 
+/* ─── Overlay + cards ─── */
 #overlay {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: rgba(8,10,14,0.55); z-index: 10; pointer-events: auto;
+  background: linear-gradient(180deg, rgba(8,10,14,0.7) 0%, rgba(8,10,14,0.5) 100%);
+  z-index: 10; pointer-events: auto;
 }
 #overlay.pass-through { pointer-events: none; background: transparent; }
 #overlay.pass-through .card { pointer-events: auto; }
 
 .card {
-  background: #1a1f26; padding: 28px 32px; border-radius: 14px;
-  text-align: center; min-width: 280px; max-width: 420px;
-  box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+  position: relative;
+  background: var(--bg-card);
+  padding: 32px 36px; border-radius: 16px;
+  text-align: center; min-width: 320px; max-width: 460px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6),
+              0 0 0 1px rgba(77, 125, 240, 0.15);
+  overflow: hidden;
 }
-.card h1 { margin: 0 0 8px; }
-.card h2 { margin: 0 0 12px; font-size: 36px; color: #4fd1c5; }
-.card p { opacity: 0.8; }
-button {
-  background: #4fd1c5; color: #0c1014; border: none; padding: 12px 28px;
-  font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer; margin-top: 14px;
+/* Israeli flag stripe accent on cards */
+.card::before, .card::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 3px;
+  background: var(--il-blue);
 }
-button:hover { background: #5fe6d8; }
+.card::before { top: 0; }
+.card::after { bottom: 0; }
 
-.mult-legend { display: flex; flex-direction: column; gap: 6px; margin: 16px 0 0; font-size: 14px; text-align: left; opacity: 0.9; }
-.mult-legend > div { display: flex; align-items: center; gap: 10px; }
+.card h1 {
+  margin: 0 0 12px; font-size: 38px; letter-spacing: -1px;
+  background: linear-gradient(135deg, var(--il-blue-light) 0%, var(--il-white) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.card h2 { margin: 0 0 12px; font-size: 42px; color: var(--il-blue-light); font-weight: 700; }
+.card p { opacity: 0.75; line-height: 1.5; }
+
+button {
+  background: var(--il-blue); color: var(--il-white); border: none;
+  padding: 13px 32px; font-size: 16px; font-weight: 600;
+  border-radius: 10px; cursor: pointer; margin-top: 18px;
+  transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
+}
+button:hover { background: var(--il-blue-light); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(77, 125, 240, 0.4); }
+button:active { transform: translateY(0); }
+
+/* ─── Multiplier legend ─── */
+.mult-legend {
+  display: flex; flex-direction: column; gap: 8px; margin: 20px 0 4px;
+  font-size: 14px; text-align: left; opacity: 0.92;
+}
+.mult-legend > div { display: flex; align-items: center; gap: 12px; }
 .mult-legend .m1, .mult-legend .m2, .mult-legend .m3 {
-  display: inline-block; min-width: 32px; padding: 2px 8px; border-radius: 6px;
+  display: inline-block; min-width: 36px; padding: 3px 10px; border-radius: 6px;
   font-weight: 700; text-align: center; font-size: 13px;
 }
-.m1 { background: #4a5568; color: #fff; }
-.m2 { background: #d69e2e; color: #1a1f26; }
-.m3 { background: #e53e3e; color: #fff; }
+.m1 { background: rgba(74, 85, 104, 0.7); color: var(--il-white); }
+.m2 { background: rgba(214, 158, 46, 0.85); color: #1a1f26; }
+.m3 { background: rgba(229, 62, 62, 0.85); color: var(--il-white); }
+.mult { padding: 2px 9px; border-radius: 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; }
 
-.mult { padding: 1px 8px; border-radius: 5px; font-size: 12px; font-weight: 700; }
-#reveal-breakdown { font-size: 14px; opacity: 0.6; margin-bottom: 6px; }
-#final-max { font-size: 13px; opacity: 0.5; margin-bottom: 6px; }
-
-#reveal-card { min-width: 320px; }
+/* ─── Reveal + end cards ─── */
+#reveal-card { min-width: 340px; }
+#reveal-breakdown { font-size: 14px; opacity: 0.55; margin: -4px 0 8px; letter-spacing: 0.4px; }
 #reveal-place { font-size: 18px; margin: 8px 0; font-weight: 600; }
-#reveal-dist { opacity: 0.7; font-size: 14px; }
-#final-score { font-size: 64px; font-weight: 700; color: #4fd1c5; margin: 12px 0; }
+#reveal-dist { opacity: 0.65; font-size: 14px; }
+#final-score {
+  font-size: 80px; font-weight: 800; margin: 12px 0; letter-spacing: -3px;
+  background: linear-gradient(135deg, var(--il-blue-light) 0%, var(--il-white) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+#final-max { font-size: 13px; opacity: 0.45; margin-bottom: 6px; letter-spacing: 0.4px; }
 
+/* ─── Animated map markers ─── */
+.marker-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--il-white);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.5);
+  position: relative;
+  animation: marker-pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.marker-dot.guess { background: var(--guess); }
+.marker-dot.truth { background: var(--truth); }
+.marker-dot::after {
+  content: ""; position: absolute; inset: -6px; border-radius: 50%;
+  border: 2px solid currentColor; opacity: 0;
+  animation: marker-pulse 1.8s ease-out 0.35s infinite;
+}
+.marker-dot.guess::after { color: var(--guess); }
+.marker-dot.truth::after { color: var(--truth); }
+
+@keyframes marker-pop {
+  0%   { transform: scale(0);   opacity: 0; }
+  60%  { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+@keyframes marker-pulse {
+  0%   { transform: scale(0.9); opacity: 0.8; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* ─── Toast ─── */
 #toast {
-  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(20px);
-  background: rgba(245, 101, 101, 0.95); color: #fff; padding: 10px 22px;
-  border-radius: 8px; font-weight: 600; font-size: 14px;
-  opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
-  z-index: 20;
+  position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: rgba(229, 62, 62, 0.96); color: var(--il-white);
+  padding: 11px 24px; border-radius: 10px; font-weight: 600; font-size: 14px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  z-index: 20; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* Hide MapLibre attribution clutter, keep concise */
-.maplibregl-ctrl-attrib { font-size: 10px; opacity: 0.6; }
+.flag-icon { width: 64px; margin: 0 auto 10px; opacity: 0.95; }
+.flag-icon svg { width: 100%; height: auto; border-radius: 4px; box-shadow: 0 4px 14px rgba(0, 56, 184, 0.35); }
+
+.maplibregl-ctrl-attrib { font-size: 10px; opacity: 0.55; }

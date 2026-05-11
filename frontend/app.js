@@ -87,6 +87,14 @@ async function loadRound() {
   state.awaitingClick = true;
 }
 
+function makeDot(cls) {
+  const el = document.createElement("div");
+  el.className = `marker-dot ${cls}`;
+  return el;
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 async function onMapClick(e) {
   if (!state.awaitingClick) return;
   const { lng, lat } = e.lngLat;
@@ -97,7 +105,8 @@ async function onMapClick(e) {
   state.awaitingClick = false;
   const id = state.rounds[state.cursor];
 
-  state.guessMarker = new maplibregl.Marker({ color: "#f56565" })
+  // 1) drop guess dot immediately
+  state.guessMarker = new maplibregl.Marker({ element: makeDot("guess") })
     .setLngLat([lng, lat]).addTo(map);
 
   const res = await fetch(`/api/round/${id}/guess`, {
@@ -107,27 +116,59 @@ async function onMapClick(e) {
   }).then(r => r.json());
 
   state.totalScore = res.total_score;
-  state.truthMarker = new maplibregl.Marker({ color: "#4fd1c5" })
-    .setLngLat([res.true_lon, res.true_lat]).addTo(map);
+  const truthLngLat = [res.true_lon, res.true_lat];
 
-  drawLine([lng, lat], [res.true_lon, res.true_lat]);
-  map.fitBounds([[Math.min(lng, res.true_lon), Math.min(lat, res.true_lat)],
-                 [Math.max(lng, res.true_lon), Math.max(lat, res.true_lat)]],
-                { padding: 120, duration: 800 });
+  // 2) fit both points smoothly
+  map.fitBounds(
+    [[Math.min(lng, res.true_lon), Math.min(lat, res.true_lat)],
+     [Math.max(lng, res.true_lon), Math.max(lat, res.true_lat)]],
+    { padding: 140, duration: 900 },
+  );
+
+  // 3) short beat, then truth dot pops in
+  await sleep(450);
+  state.truthMarker = new maplibregl.Marker({ element: makeDot("truth") })
+    .setLngLat(truthLngLat).addTo(map);
+
+  // 4) animate dashed line from guess → truth over 1.1s
+  await animateLine([lng, lat], truthLngLat, 1100);
 
   showReveal(res);
 }
 
-function drawLine(a, b) {
+function animateLine(from, to, durationMs) {
   state.lineId = "guess-line";
-  if (map.getSource(state.lineId)) map.removeLayer(state.lineId), map.removeSource(state.lineId);
+  if (map.getSource(state.lineId)) {
+    map.removeLayer(state.lineId);
+    map.removeSource(state.lineId);
+  }
   map.addSource(state.lineId, {
     type: "geojson",
-    data: { type: "Feature", geometry: { type: "LineString", coordinates: [a, b] } },
+    data: { type: "Feature", geometry: { type: "LineString", coordinates: [from, from] } },
   });
   map.addLayer({
     id: state.lineId, type: "line", source: state.lineId,
-    paint: { "line-color": "#f0f0f0", "line-width": 2, "line-dasharray": [2, 2] },
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: {
+      "line-color": "#ffffff",
+      "line-width": 2.5,
+      "line-dasharray": [2, 2],
+      "line-opacity": 0.9,
+    },
+  });
+  const src = map.getSource(state.lineId);
+  const start = performance.now();
+  return new Promise((resolve) => {
+    function step(t) {
+      const u = Math.min(1, (t - start) / durationMs);
+      const eased = 1 - Math.pow(1 - u, 3);  // ease-out cubic
+      const lng = from[0] + (to[0] - from[0]) * eased;
+      const lat = from[1] + (to[1] - from[1]) * eased;
+      src.setData({ type: "Feature", geometry: { type: "LineString", coordinates: [from, [lng, lat]] } });
+      if (u < 1) requestAnimationFrame(step);
+      else resolve();
+    }
+    requestAnimationFrame(step);
   });
 }
 
