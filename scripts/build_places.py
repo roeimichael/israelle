@@ -4,20 +4,22 @@ Output schema: id,name_en,name_he,type,lat,lon,importance
 """
 import csv
 import json
+import re
 from pathlib import Path
 
 RAW = Path(__file__).parent.parent / "data" / "raw" / "overpass.json"
 OUT = Path(__file__).parent.parent / "data" / "places.csv"
 
-# place tag → (display type, base importance)
+# place tag → (display type, base importance). Hamlet/suburb/neighbourhood dropped.
 PLACE_WEIGHTS = {
     "city": ("city", 1.0),
-    "town": ("town", 0.85),
+    "town": ("city", 0.85),   # collapse town into city — same Hebrew "עיר"
     "village": ("village", 0.65),
-    "hamlet": ("hamlet", 0.45),
-    "suburb": ("neighborhood", 0.35),
-    "neighbourhood": ("neighborhood", 0.30),
 }
+
+# historic values that aren't useful as game targets
+HISTORIC_DROP = {"yes", "building", "tank", "cannon", "wreck", "aircraft",
+                 "boundary_stone", "citywalls", "water_well"}
 
 
 def classify(tags: dict) -> tuple[str, float] | None:
@@ -27,7 +29,8 @@ def classify(tags: dict) -> tuple[str, float] | None:
     if tags.get("natural") == "peak":
         return ("mountain", 0.55)
     if h := tags.get("historic"):
-        # archaeological site, ruins, monument, memorial → notable
+        if h in HISTORIC_DROP:
+            return None
         if h in {"archaeological_site", "monument", "memorial", "castle", "fort"}:
             return (h.replace("_", " "), 0.55)
         if h == "ruins":
@@ -50,11 +53,17 @@ def classify(tags: dict) -> tuple[str, float] | None:
     return None
 
 
+_LEAD_JUNK = re.compile(r"^[\d\s\-_/.,]+")  # strip elevation prefixes etc.
+
+
+def _clean(s: str) -> str:
+    return _LEAD_JUNK.sub("", s).strip()
+
+
 def pick_name(tags: dict) -> tuple[str, str] | None:
     """Return (name_en, name_he) — both required."""
     he = tags.get("name:he") or tags.get("name:he-latn")
     en = tags.get("name:en") or tags.get("int_name")
-    # Fall back to generic 'name' if it looks Latin/Hebrew respectively
     fallback = tags.get("name", "")
     if not en and fallback and fallback.isascii():
         en = fallback
@@ -62,7 +71,10 @@ def pick_name(tags: dict) -> tuple[str, str] | None:
         he = fallback
     if not en or not he:
         return None
-    return (en.strip(), he.strip())
+    en, he = _clean(en), _clean(he)
+    if not en or not he:
+        return None
+    return (en, he)
 
 
 def coord(el: dict) -> tuple[float, float] | None:

@@ -24,8 +24,8 @@ def _load() -> dict[int, dict]:
 PLACES: dict[int, dict] = _load()
 
 DIFFICULTY_TYPES = {
-    "easy":   {"city", "town"},
-    "medium": {"city", "town", "village", "hamlet", "mountain"},
+    "easy":   {"city"},
+    "medium": {"city", "village", "mountain"},
     "hard":   None,  # all types
 }
 
