@@ -153,7 +153,9 @@ button:active { transform: translateY(0); }
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-.flag-icon { width: 64px; margin: 0 auto 10px; opacity: 0.95; }
-.flag-icon svg { width: 100%; height: auto; border-radius: 4px; box-shadow: 0 4px 14px rgba(0, 56, 184, 0.35); }
+.flag-icon {
+  display: block; width: 96px; height: auto; margin: 0 auto 12px;
+  border-radius: 4px; box-shadow: 0 4px 14px rgba(0, 56, 184, 0.35);
+}
 
 .maplibregl-ctrl-attrib { font-size: 10px; opacity: 0.55; }

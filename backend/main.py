@@ -66,7 +66,10 @@ def post_guess(round_id: int, body: GuessIn):
     }
 
 
+DOCS = Path(__file__).parent.parent / "docs"
+
 app.mount("/static", StaticFiles(directory=str(FRONTEND)), name="static")
+app.mount("/docs", StaticFiles(directory=str(DOCS)), name="docs")
 
 
 @app.get("/")
