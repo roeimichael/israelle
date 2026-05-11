@@ -11,14 +11,20 @@ from shapely.ops import unary_union
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
-# Full territorial extent: Israel proper + West Bank + Gaza Strip.
-# Relation ids: 1473946 (Israel admin_level=2), 1613659 (West Bank admin_level=4),
-# 1473938 (Gaza Strip admin_level=4).
+# Full territorial extent — what's actually under Israeli control post-1967:
+#   1473946  Israel proper (admin_level=2)
+#   1803010  Judea and Samaria area (admin_level=4) — Israeli civil admin of
+#            the West Bank, covers what OSM models as the geographical West
+#            Bank including Area C. OSM's 1613659 "West Bank" is only the PA-
+#            administered Areas A+B, which would leave gaping holes; do not
+#            use that one alone.
+#   1473938  Gaza Strip (admin_level=4) — included for geographical complete-
+#            ness even though Israel does not currently administer it.
 QUERY = """
 [out:json][timeout:180];
 (
   relation(1473946);
-  relation(1613659);
+  relation(1803010);
   relation(1473938);
 );
 out geom;
