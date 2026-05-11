@@ -6,13 +6,21 @@ import json
 from pathlib import Path
 
 import httpx
+from shapely.geometry import Polygon, mapping
+from shapely.ops import unary_union
 
 OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 
-# Israel admin relation. (Overpass area-id = 3600000000 + relation-id.)
+# Full territorial extent: Israel proper + West Bank + Gaza Strip.
+# Relation ids: 1473946 (Israel admin_level=2), 1613659 (West Bank admin_level=4),
+# 1473938 (Gaza Strip admin_level=4).
 QUERY = """
 [out:json][timeout:180];
-relation(1473946);
+(
+  relation(1473946);
+  relation(1613659);
+  relation(1473938);
+);
 out geom;
 """
 
@@ -51,22 +59,34 @@ def main():
     )
     r.raise_for_status()
     data = r.json()
-    rel = data["elements"][0]
+    print(f"got {len(data['elements'])} relations")
 
-    outer_ways = []
-    for m in rel.get("members", []):
-        if m.get("role") == "outer" and m["type"] == "way" and "geometry" in m:
-            outer_ways.append([(round(p["lon"], 5), round(p["lat"], 5)) for p in m["geometry"]])
-    rings = stitch(outer_ways)
-    rings.sort(key=lambda r: -len(r))
-    print(f"stitched {len(rings)} rings (largest has {len(rings[0])} points)")
+    all_rings: list[list[tuple[float, float]]] = []
+    for rel in data["elements"]:
+        outer_ways = []
+        for m in rel.get("members", []):
+            if m.get("role") == "outer" and m["type"] == "way" and "geometry" in m:
+                outer_ways.append([(round(p["lon"], 7), round(p["lat"], 7)) for p in m["geometry"]])
+        rings = stitch(outer_ways)
+        rings.sort(key=lambda r: -len(r))
+        name = rel.get("tags", {}).get("name:en") or rel.get("tags", {}).get("name", "?")
+        # Keep only the largest ring per relation. Smaller rings are interior
+        # enclaves (e.g., individual Israeli settlements modeled as separate
+        # boundary segments) — irrelevant for a country-level mask.
+        if not rings:
+            continue
+        kept = [rings[0]]
+        print(f"  {name}: stitched {len(rings)} ring(s), kept largest ({len(kept[0])} pts)")
+        all_rings.extend(kept)
 
-    geom = (
-        {"type": "Polygon", "coordinates": [[list(p) for p in rings[0]]]}
-        if len(rings) == 1
-        else {"type": "MultiPolygon", "coordinates": [[[list(p) for p in r]] for r in rings]}
-    )
-    feature = {"type": "Feature", "properties": {"name": "Israel"}, "geometry": geom}
+    # Union Israel + West Bank + Gaza into a single outer boundary so the
+    # rendered border line has no internal seams.
+    polys = [Polygon(r) for r in all_rings]
+    merged = unary_union(polys)
+    geom = mapping(merged)
+    print(f"unioned -> {geom['type']}, "
+          f"{len(geom['coordinates']) if geom['type'] == 'MultiPolygon' else 1} polygon(s)")
+    feature = {"type": "Feature", "properties": {"name": "Israel (full extent)"}, "geometry": geom}
 
     out = Path(__file__).parent.parent / "data" / "israel.geojson"
     out.write_text(json.dumps(feature, ensure_ascii=False), encoding="utf-8")
