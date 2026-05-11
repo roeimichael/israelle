@@ -124,28 +124,24 @@ async function onMapClick(e) {
   state.totalScore = res.total_score;
   const truthLngLat = [res.true_lon, res.true_lat];
 
-  // 2) draw the polygon underneath (if available)
+  // Polygon + truth dot appear immediately after the guess registers.
   drawPolygon(res.polygon);
+  state.truthMarker = new maplibregl.Marker({ element: makeDot("truth") })
+    .setLngLat(truthLngLat).addTo(map);
 
-  // 3) fit bounds — include polygon if present, otherwise just the two points
+  // Fit camera (polygon bbox if available, otherwise just the two points).
   const bbox = polygonBbox(res.polygon) ?? [
     [Math.min(lng, res.true_lon), Math.min(lat, res.true_lat)],
     [Math.max(lng, res.true_lon), Math.max(lat, res.true_lat)],
   ];
-  // expand bbox to also include guess point
   bbox[0][0] = Math.min(bbox[0][0], lng);
   bbox[0][1] = Math.min(bbox[0][1], lat);
   bbox[1][0] = Math.max(bbox[1][0], lng);
   bbox[1][1] = Math.max(bbox[1][1], lat);
-  map.fitBounds(bbox, { padding: 140, duration: 900 });
+  map.fitBounds(bbox, { padding: 160, duration: 1200 });
 
-  // 4) short beat, then truth dot pops in
-  await sleep(450);
-  state.truthMarker = new maplibregl.Marker({ element: makeDot("truth") })
-    .setLngLat(truthLngLat).addTo(map);
-
-  // 5) animate dashed line from guess → truth over 1.1s
-  await animateLine([lng, lat], truthLngLat, 1100);
+  // Slow, smooth line draw with a "comet" head dot.
+  await animateLine([lng, lat], truthLngLat, 3000);
 
   showReveal(res);
 }
@@ -193,6 +189,7 @@ function drawPolygon(geom) {
 function animateLine(from, to, durationMs) {
   state.lineId = "guess-line";
   if (map.getSource(state.lineId)) {
+    map.removeLayer(state.lineId + "-glow");
     map.removeLayer(state.lineId);
     map.removeSource(state.lineId);
   }
@@ -200,27 +197,48 @@ function animateLine(from, to, durationMs) {
     type: "geojson",
     data: { type: "Feature", geometry: { type: "LineString", coordinates: [from, from] } },
   });
+  // Soft glow underlay
+  map.addLayer({
+    id: state.lineId + "-glow", type: "line", source: state.lineId,
+    layout: { "line-cap": "round", "line-join": "round" },
+    paint: { "line-color": "#4d7df0", "line-width": 9, "line-opacity": 0.35, "line-blur": 3 },
+  });
+  // Crisp dashed top line
   map.addLayer({
     id: state.lineId, type: "line", source: state.lineId,
     layout: { "line-cap": "round", "line-join": "round" },
     paint: {
       "line-color": "#ffffff",
-      "line-width": 2.5,
-      "line-dasharray": [2, 2],
-      "line-opacity": 0.9,
+      "line-width": 3,
+      "line-dasharray": [1.5, 1.8],
+      "line-opacity": 0.95,
     },
   });
+
+  // Comet-head marker travels along with the line tip.
+  const headEl = document.createElement("div");
+  headEl.className = "comet-head";
+  state.cometMarker = new maplibregl.Marker({ element: headEl }).setLngLat(from).addTo(map);
+
   const src = map.getSource(state.lineId);
   const start = performance.now();
+  const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
   return new Promise((resolve) => {
     function step(t) {
       const u = Math.min(1, (t - start) / durationMs);
-      const eased = 1 - Math.pow(1 - u, 3);  // ease-out cubic
-      const lng = from[0] + (to[0] - from[0]) * eased;
-      const lat = from[1] + (to[1] - from[1]) * eased;
+      const k = ease(u);
+      const lng = from[0] + (to[0] - from[0]) * k;
+      const lat = from[1] + (to[1] - from[1]) * k;
       src.setData({ type: "Feature", geometry: { type: "LineString", coordinates: [from, [lng, lat]] } });
+      state.cometMarker.setLngLat([lng, lat]);
       if (u < 1) requestAnimationFrame(step);
-      else resolve();
+      else {
+        // fade out comet
+        headEl.classList.add("fading");
+        setTimeout(() => { state.cometMarker?.remove(); state.cometMarker = null; }, 400);
+        resolve();
+      }
     }
     requestAnimationFrame(step);
   });
@@ -255,10 +273,19 @@ function nextRound() {
 function clearMarkers() {
   state.guessMarker?.remove(); state.guessMarker = null;
   state.truthMarker?.remove(); state.truthMarker = null;
+  state.cometMarker?.remove(); state.cometMarker = null;
   if (state.lineId && map.getSource(state.lineId)) {
-    map.removeLayer(state.lineId); map.removeSource(state.lineId);
+    if (map.getLayer(state.lineId + "-glow")) map.removeLayer(state.lineId + "-glow");
+    if (map.getLayer(state.lineId)) map.removeLayer(state.lineId);
+    map.removeSource(state.lineId);
   }
   state.lineId = null;
+  if (state.polyId) {
+    if (map.getLayer(state.polyId + "-fill")) map.removeLayer(state.polyId + "-fill");
+    if (map.getLayer(state.polyId + "-line")) map.removeLayer(state.polyId + "-line");
+    if (map.getSource(state.polyId)) map.removeSource(state.polyId);
+    state.polyId = null;
+  }
 }
 
 function showCard(cardId, passThrough = false) {

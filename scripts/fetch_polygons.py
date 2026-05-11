@@ -14,7 +14,22 @@ OVERPASS_URL = "https://overpass-api.de/api/interpreter"
 QUERY = """
 [out:json][timeout:300];
 area(3601473946)->.il;
-relation["boundary"="administrative"]["admin_level"="8"](area.il);
+(
+  relation["boundary"="administrative"]["admin_level"="8"](area.il);
+  way["leisure"="nature_reserve"]["name"](area.il);
+  relation["leisure"="nature_reserve"]["name"](area.il);
+  way["boundary"="national_park"]["name"](area.il);
+  relation["boundary"="national_park"]["name"](area.il);
+  way["boundary"="protected_area"]["name"](area.il);
+  relation["boundary"="protected_area"]["name"](area.il);
+  way["historic"="archaeological_site"]["name"](area.il);
+  way["historic"="castle"]["name"](area.il);
+  way["historic"="fort"]["name"](area.il);
+  way["historic"="ruins"]["name"](area.il);
+  way["historic"="monument"]["name"](area.il);
+  way["historic"="memorial"]["name"](area.il);
+  way["tourism"~"^(theme_park|attraction|museum)$"]["name"](area.il);
+);
 out geom;
 """
 

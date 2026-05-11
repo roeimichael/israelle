@@ -168,4 +168,15 @@ button:active { transform: translateY(0); }
   border-radius: 4px; box-shadow: 0 4px 14px rgba(0, 56, 184, 0.35);
 }
 
+/* Comet head — travels with the line tip */
+.comet-head {
+  width: 12px; height: 12px; border-radius: 50%;
+  background: var(--il-white);
+  box-shadow: 0 0 14px 4px rgba(255, 255, 255, 0.85),
+              0 0 28px 8px rgba(77, 125, 240, 0.7);
+  transform: translate(-50%, -50%);
+  transition: opacity 0.35s, transform 0.35s;
+}
+.comet-head.fading { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+
 .maplibregl-ctrl-attrib { font-size: 10px; opacity: 0.55; }

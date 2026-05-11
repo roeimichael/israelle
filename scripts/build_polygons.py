@@ -37,6 +37,17 @@ def stitch_ways(ways: list[list[tuple[float, float]]]) -> list[list[tuple[float,
     return rings
 
 
+def way_to_geom(way: dict) -> dict | None:
+    """Convert a closed way to GeoJSON Polygon. Returns None if not a polygon."""
+    geom = way.get("geometry")
+    if not geom or len(geom) < 4:
+        return None
+    pts = [(round(p["lon"], 5), round(p["lat"], 5)) for p in geom]
+    if pts[0] != pts[-1]:
+        pts.append(pts[0])  # close it
+    return {"type": "Polygon", "coordinates": [[list(p) for p in pts]]}
+
+
 def relation_to_geom(rel: dict) -> dict | None:
     """Convert an Overpass relation into a GeoJSON Polygon/MultiPolygon."""
     outer_ways, inner_ways = [], []
@@ -55,8 +66,6 @@ def relation_to_geom(rel: dict) -> dict | None:
     inners = stitch_ways(inner_ways)
     if not outers:
         return None
-    # Simple model: one outer ring with all inner holes. (Multi-outer is rare in
-    # admin polygons; treat each outer as its own polygon if it happens.)
     if len(outers) == 1:
         coords = [[list(p) for p in outers[0]]]
         coords += [[list(p) for p in r] for r in inners]
@@ -74,36 +83,53 @@ def _norm(s: str) -> str:
 def main():
     data = json.loads(RAW.read_text(encoding="utf-8"))
 
-    # name_en/name_he → geom (last write wins, fine for our scale)
+    # Index polygons by name (en/he) AND by wikidata Q-id (authoritative).
     by_en: dict[str, dict] = {}
     by_he: dict[str, dict] = {}
-    for rel in data["elements"]:
-        tags = rel.get("tags", {})
-        geom = relation_to_geom(rel)
-        if not geom:
+    by_wd: dict[str, dict] = {}
+    skipped = 0
+    for el in data["elements"]:
+        tags = el.get("tags", {})
+        if el["type"] == "relation":
+            geom = relation_to_geom(el)
+        elif el["type"] == "way":
+            geom = way_to_geom(el)
+        else:
             continue
-        if en := tags.get("name:en"):
-            by_en[_norm(en)] = geom
-        if he := tags.get("name:he"):
-            by_he[_norm(he)] = geom
-    print(f"polygons indexed: {len(by_en)} en, {len(by_he)} he")
+        if not geom:
+            skipped += 1
+            continue
+        if wd := tags.get("wikidata"):
+            by_wd[wd] = geom
+        for key in ("name:en", "int_name"):
+            if v := tags.get(key):
+                by_en[_norm(v)] = geom
+        if v := tags.get("name:he"):
+            by_he[_norm(v)] = geom
+        if (n := tags.get("name")) and n not in (tags.get("name:en"), tags.get("name:he")):
+            if any("֐" <= c <= "׿" for c in n):
+                by_he[_norm(n)] = geom
+            elif n.isascii():
+                by_en[_norm(n)] = geom
+    print(f"polygons indexed: {len(by_en)} en, {len(by_he)} he, {len(by_wd)} wikidata (skipped {skipped})")
 
-    # Match against CSV
+    # Match against CSV (wikidata first — authoritative, then name fallbacks)
     result: dict[str, dict] = {}
-    matched_by_en = matched_by_he = 0
+    m_wd = m_en = m_he = 0
     with PLACES_CSV.open(encoding="utf-8") as f:
         for row in csv.DictReader(f):
             pid = row["id"]
+            wd = row.get("wikidata", "")
             en, he = _norm(row["name_en"]), _norm(row["name_he"])
-            if en in by_en:
-                result[pid] = by_en[en]
-                matched_by_en += 1
+            if wd and wd in by_wd:
+                result[pid] = by_wd[wd]; m_wd += 1
+            elif en in by_en:
+                result[pid] = by_en[en]; m_en += 1
             elif he in by_he:
-                result[pid] = by_he[he]
-                matched_by_he += 1
+                result[pid] = by_he[he]; m_he += 1
 
     OUT.write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
-    print(f"matched: {matched_by_en} via en, {matched_by_he} via he, total {len(result)}")
+    print(f"matched: {m_wd} via wikidata, {m_en} via en, {m_he} via he — total {len(result)}")
     print(f"wrote {OUT} ({OUT.stat().st_size//1024} KB)")
 
 

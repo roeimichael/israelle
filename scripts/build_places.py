@@ -127,6 +127,7 @@ def main():
             "lat": c[0],
             "lon": c[1],
             "importance": round(importance, 3),
+            "wikidata": tags.get("wikidata", ""),
         }
 
     final = [r for r in rows.values() if r["importance"] >= 0.35]
@@ -134,7 +135,7 @@ def main():
 
     OUT.parent.mkdir(exist_ok=True)
     with OUT.open("w", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["id", "name_en", "name_he", "type", "lat", "lon", "importance"])
+        w = csv.DictWriter(f, fieldnames=["id", "name_en", "name_he", "type", "lat", "lon", "importance", "wikidata"])
         w.writeheader()
         w.writerows(final)
 
