@@ -27,14 +27,20 @@ def _load() -> dict[int, dict]:
     return out
 
 
-def _category(place_type: str) -> tuple[str, int]:
-    """Return (category_label, multiplier). Mults sum to 1000 in a fixed-mix game:
-    2×city (1×) + 2×settlement (2×) + 1×landmark (4×) = 200 + 400 + 400 = 1000."""
+def _category(place_type: str) -> tuple[str, float]:
+    """Return (category_label, multiplier). Max round score = base × mult,
+    where base maxes at 100. Fixed mix below sums to 1000:
+      2 × city       (1.0×) →  2 × 100 = 200
+      2 × settlement (1.5×) →  2 × 150 = 300
+      2 × landmark   (2.5×) →  2 × 250 = 500
+                                       ───────
+                                         1000
+    """
     if place_type == "city":
-        return ("city", 1)
+        return ("city", 1.0)
     if place_type == "village":
-        return ("settlement", 2)
-    return ("landmark", 4)
+        return ("settlement", 1.5)
+    return ("landmark", 2.5)
 
 
 PLACES: dict[int, dict] = _load()
@@ -44,8 +50,8 @@ for _p in PLACES.values():
     _p["multiplier"] = mult
 
 
-# Fixed composition: every game draws exactly this many of each category.
-GAME_COMPOSITION = [("city", 2), ("settlement", 2), ("landmark", 1)]
+# 2 of each category, shuffled → 6 rounds per game.
+GAME_COMPOSITION = [("city", 2), ("settlement", 2), ("landmark", 2)]
 
 
 def _weighted_sample(ids: list[int], k: int) -> list[int]:

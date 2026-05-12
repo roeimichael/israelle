@@ -126,7 +126,7 @@ async function loadRound() {
   document.getElementById("place-name-en").textContent = r.name_en;
   document.getElementById("place-name-he").textContent = r.name_he;
   document.getElementById("place-type").textContent = `${r.type} · ${r.category}`;
-  document.getElementById("round-num").textContent = `Round ${state.cursor + 1} / 5`;
+  document.getElementById("round-num").textContent = `Round ${state.cursor + 1} / 6`;
   const multEl = document.getElementById("round-mult");
   multEl.textContent = `${r.multiplier}×`;
   multEl.className = `mult m${r.multiplier}`;

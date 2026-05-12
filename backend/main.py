@@ -60,7 +60,7 @@ def post_guess(round_id: int, body: GuessIn):
         raise HTTPException(404, "unknown round")
     dist = haversine_km(body.lat, body.lon, p["lat"], p["lon"])
     base = base_score(dist)
-    round_score = base * p["multiplier"]
+    round_score = round(base * p["multiplier"])
     rn, total, done = game_state.record_guess(body.game_id, round_id, round_score)
     return {
         "distance_km": round(dist, 2),
