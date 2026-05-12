@@ -263,10 +263,15 @@ function animateLine(from, to, durationMs) {
     },
   });
 
-  // Comet-head marker travels along with the line tip.
+  // Comet-head marker travels along with the line tip. Wrap in 0-size
+  // container so MapLibre's per-frame transform writes don't fight our
+  // CSS centering (same trick as the dot markers).
+  const wrap = document.createElement("div");
+  wrap.className = "marker-wrap";
   const headEl = document.createElement("div");
   headEl.className = "comet-head";
-  state.cometMarker = new maplibregl.Marker({ element: headEl }).setLngLat(from).addTo(map);
+  wrap.appendChild(headEl);
+  state.cometMarker = new maplibregl.Marker({ element: wrap }).setLngLat(from).addTo(map);
 
   const src = map.getSource(state.lineId);
   const start = performance.now();

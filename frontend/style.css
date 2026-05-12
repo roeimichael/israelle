@@ -168,8 +168,11 @@ button:active { transform: translateY(0); }
   border-radius: 4px; box-shadow: 0 4px 14px rgba(0, 56, 184, 0.35);
 }
 
-/* Comet head — travels with the line tip */
+/* Comet head — travels with the line tip. Lives inside .marker-wrap so
+   MapLibre positions the wrap (zero size) at the LngLat, and this dot is
+   centered inside it via absolute + translate. */
 .comet-head {
+  position: absolute; left: 50%; top: 50%;
   width: 12px; height: 12px; border-radius: 50%;
   background: var(--il-white);
   box-shadow: 0 0 14px 4px rgba(255, 255, 255, 0.85),
