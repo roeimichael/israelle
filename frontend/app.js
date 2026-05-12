@@ -119,18 +119,46 @@ async function startGame() {
   await loadRound();
 }
 
+const TYPE_HE = {
+  city: "עיר",
+  village: "יישוב",
+  mountain: "הר",
+  ruins: "חורבה",
+  viewpoint: "תצפית",
+  "archaeological site": "אתר ארכיאולוגי",
+  memorial: "אנדרטה",
+  attraction: "אתר תיירות",
+  museum: "מוזיאון",
+  monument: "אנדרטה",
+  battlefield: "שדה קרב",
+  tomb: "קבר",
+  castle: "טירה",
+  fort: "מבצר",
+  "nature reserve": "שמורת טבע",
+  "theme park": "פארק שעשועים",
+  "city gate": "שער עיר",
+  "wayside shrine": "מקדש דרך",
+  "christian site": "אתר נוצרי",
+  "jewish site": "אתר יהודי",
+  "druze site": "אתר דרוזי",
+  "religious site": "אתר דתי",
+};
+const CATEGORY_HE = { city: "עיר", settlement: "יישוב", landmark: "אתר" };
+const multClass = (m) => m === 1 ? "m1" : (m === 1.5 ? "m2" : "m3");
+
 async function loadRound() {
   const id = state.rounds[state.cursor];
   const r = await fetch(`/api/round/${id}`).then(r => r.json());
   state.currentMult = r.multiplier;
-  document.getElementById("place-name-en").textContent = r.name_en;
+  state.currentNameHe = r.name_he;
   document.getElementById("place-name-he").textContent = r.name_he;
-  document.getElementById("place-type").textContent = `${r.type} · ${r.category}`;
-  document.getElementById("round-num").textContent = `Round ${state.cursor + 1} / 6`;
+  document.getElementById("place-type").textContent =
+    `${TYPE_HE[r.type] || r.type} · ${CATEGORY_HE[r.category] || r.category}`;
+  document.getElementById("round-num").textContent = `סבב ${state.cursor + 1} / 6`;
   const multEl = document.getElementById("round-mult");
-  multEl.textContent = `${r.multiplier}×`;
-  multEl.className = `mult m${r.multiplier}`;
-  document.getElementById("round-score").textContent = `Score: ${state.totalScore}`;
+  multEl.textContent = `×${r.multiplier}`;
+  multEl.className = `mult ${multClass(r.multiplier)}`;
+  document.getElementById("round-score").textContent = `ניקוד: ${state.totalScore}`;
   document.getElementById("hud").classList.remove("hidden");
   state.awaitingClick = true;
 }
@@ -153,7 +181,7 @@ async function onMapClick(e) {
   if (!state.awaitingClick) return;
   const { lng, lat } = e.lngLat;
   if (!insideIsrael(lng, lat)) {
-    flashToast("Click inside Israel");
+    flashToast("לחצו בתוך ישראל");
     return;
   }
   state.awaitingClick = false;
@@ -302,12 +330,10 @@ function showReveal(res) {
   document.getElementById("reveal-score").textContent = `+${res.round_score}`;
   document.getElementById("reveal-breakdown").textContent =
     `${res.base_score} × ${res.multiplier}`;
-  document.getElementById("reveal-place").textContent =
-    document.getElementById("place-name-en").textContent;
-  document.getElementById("reveal-dist").textContent = `${res.distance_km} km away`;
-  document.getElementById("btn-next").textContent = res.done ? "See result" : "Next →";
-  // The round is over — polygon disappears with the reveal so it doesn't
-  // linger into next turn.
+  document.getElementById("reveal-place").textContent = state.currentNameHe;
+  document.getElementById("reveal-dist").textContent =
+    `${res.distance_km} ק״מ ממך`;
+  document.getElementById("btn-next").textContent = res.done ? "סיכום" : "הבא ←";
   clearPolygon();
   showCard("reveal-card", true);
   state._done = res.done;

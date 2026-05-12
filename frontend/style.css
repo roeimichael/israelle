@@ -33,10 +33,11 @@ body { background: var(--bg); }
   backdrop-filter: blur(10px);
 }
 #round-info {
-  font-size: 12px; color: var(--text-dim);
+  font-size: 13px; color: var(--text-dim);
   display: flex; justify-content: center; align-items: center; gap: 14px;
-  margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 4px; letter-spacing: 0.3px;
 }
+#round-info span { unicode-bidi: isolate; }
 #prompt { font-size: 20px; font-weight: 600; }
 #place-name-he { font-weight: 700; margin: 0 6px; color: var(--il-blue-light); }
 #place-type {
