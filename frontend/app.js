@@ -36,18 +36,25 @@ let map;
 let sb;            // supabase client
 let session = null;
 let playerId, playerName;
+let soundOn = true;
+let cbOn = false;  // colorblind palette
+let audioCtx;
 
 const state = {
-  rounds: [],          // [{round_idx, name_he, type, category, multiplier}, ...]
-  played: [],          // [{round_idx, round_score, ...}, ...] from server
+  rounds: [],
+  played: [],
   cursor: 0,
   totalScore: 0,
   date: "",
+  dayNumber: 0,
   awaitingClick: false,
-  // map artifacts
   guessMarker: null, truthMarker: null, cometMarker: null,
   lineId: null, polyId: null,
 };
+
+// Default + colorblind emoji palettes (5 buckets, best → worst)
+const PALETTE_DEFAULT = ["🟩", "🟢", "🟡", "🟠", "🔴"];
+const PALETTE_CB      = ["⬛", "🟦", "⬜", "🟪", "❎"];
 
 // ─── Boot ───────────────────────────────────────────────────────────────────
 async function init() {
@@ -70,6 +77,9 @@ async function init() {
     localStorage.setItem("israelle_player_id", playerId);
   }
   playerName = localStorage.getItem("israelle_player_name") || "";
+  soundOn = localStorage.getItem("israelle_sound") !== "off";
+  cbOn = localStorage.getItem("israelle_cb") === "on";
+  applyToggleVisuals();
 
   // map
   map = new maplibregl.Map({
@@ -92,7 +102,31 @@ async function init() {
   document.getElementById("btn-share").onclick = onShare;
   document.getElementById("btn-name-save").onclick = onSaveName;
 
+  // toolbar
+  document.getElementById("btn-help").onclick = () => openHowto(0);
+  document.getElementById("btn-stats").onclick = openStats;
+  document.getElementById("btn-stats-close").onclick = () => showCard("start-card");
+  document.getElementById("btn-sound").onclick = toggleSound;
+  document.getElementById("btn-colorblind").onclick = toggleCB;
+  document.getElementById("btn-howto-next").onclick = () => moveHowto(+1);
+  document.getElementById("btn-howto-prev").onclick = () => moveHowto(-1);
+
   startCountdown();
+  await fetchDayNumber();
+
+  // first-visit howto
+  if (!localStorage.getItem("israelle_seen_howto")) {
+    openHowto(0);
+  }
+}
+
+async function fetchDayNumber() {
+  try {
+    const t = await fetch("/api/today").then((r) => r.json());
+    state.dayNumber = t.day_number;
+    state.date = t.date;
+    document.getElementById("day-num-start").textContent = `#${t.day_number}`;
+  } catch {}
 }
 
 // ─── Auth UI ────────────────────────────────────────────────────────────────
@@ -163,19 +197,27 @@ async function onSaveName() {
 }
 
 async function beginDay() {
-  // fetch today's puzzle + my progress
-  const [today, me] = await Promise.all([
-    fetch("/api/today").then((r) => r.json()),
-    fetch(`/api/today/me?player_id=${encodeURIComponent(playerId)}`).then((r) => r.json()),
-  ]);
-  state.date = today.date;
-  state.rounds = today.rounds;
-  state.played = me.guesses || [];
-  state.totalScore = me.total_score || 0;
-  state.cursor = state.played.length;
+  showSpinner(true);
+  try {
+    const [today, me] = await Promise.all([
+      fetchJSON("/api/today"),
+      fetchJSON(`/api/today/me?player_id=${encodeURIComponent(playerId)}`),
+    ]);
+    state.date = today.date;
+    state.dayNumber = today.day_number;
+    state.rounds = today.rounds;
+    state.played = me.guesses || [];
+    state.totalScore = me.total_score || 0;
+    state.cursor = state.played.length;
+  } catch (e) {
+    flashToast("נכשלה טעינת הפאזל. נסו שוב.");
+    showSpinner(false);
+    return;
+  }
+  showSpinner(false);
 
-  if (me.done) {
-    showEnd(/*restored*/ true);
+  if (state.played.length >= 6) {
+    showEnd(true);
     return;
   }
   showCard(null);
@@ -187,6 +229,7 @@ async function loadRound() {
   document.getElementById("place-name-he").textContent = r.name_he;
   document.getElementById("place-type").textContent =
     `${TYPE_HE[r.type] || r.type} · ${CATEGORY_HE[r.category] || r.category}`;
+  document.getElementById("day-num").textContent = `#${state.dayNumber}`;
   document.getElementById("round-num").textContent = `סבב ${state.cursor + 1} / 6`;
   const multEl = document.getElementById("round-mult");
   multEl.textContent = `×${r.multiplier}`;
@@ -232,6 +275,9 @@ async function onMapClick(e) {
 
   state.totalScore = res.total_score;
   state.played.push({ ...res, name_he: state.rounds[state.cursor].name_he });
+  // chime on a "good" guess (>=80% of max for this round's multiplier)
+  const r = state.rounds[state.cursor];
+  if (res.round_score / (100 * r.multiplier) >= 0.8) chime(1100);
 
   const truthLngLat = [res.true_lon, res.true_lat];
   drawPolygon(res.polygon);
@@ -357,30 +403,49 @@ function onNext() {
 }
 
 function showEnd(restored) {
-  document.getElementById("final-score").textContent = state.totalScore;
   document.getElementById("emoji-strip").textContent = emojiStrip(state.played);
   showCard("end-card");
+  if (restored) {
+    document.getElementById("final-score").textContent = state.totalScore;
+  } else {
+    countUp(document.getElementById("final-score"), 0, state.totalScore, 1500);
+  }
+}
+
+function countUp(el, from, to, ms) {
+  const start = performance.now();
+  const ease = (t) => 1 - Math.pow(1 - t, 3);
+  function step(t) {
+    const u = Math.min(1, (t - start) / ms);
+    el.textContent = Math.round(from + (to - from) * ease(u));
+    if (u < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
 }
 
 // ─── Share / leaderboard / history ──────────────────────────────────────────
 function emojiStrip(played) {
-  // bucket pct of max possible (= base 100 × multiplier) per round
+  const palette = cbOn ? PALETTE_CB : PALETTE_DEFAULT;
   return played
+    .slice()
     .sort((a, b) => a.round_idx - b.round_idx)
     .map((g) => {
       const max = 100 * (g.multiplier || state.rounds[g.round_idx]?.multiplier || 1);
       const pct = g.round_score / max;
-      if (pct >= 0.9) return "🟩";
-      if (pct >= 0.75) return "🟢";
-      if (pct >= 0.5) return "🟡";
-      if (pct >= 0.25) return "🟠";
-      return "🔴";
+      if (pct >= 0.9) return palette[0];
+      if (pct >= 0.75) return palette[1];
+      if (pct >= 0.5) return palette[2];
+      if (pct >= 0.25) return palette[3];
+      return palette[4];
     })
     .join("");
 }
 
 async function onShare() {
-  const txt = `IsraelE ${state.date}\n${state.totalScore}/1000\n${emojiStrip(state.played)}\n${location.origin}`;
+  const txt =
+    `IsraelE #${state.dayNumber} — ${state.totalScore}/1000\n` +
+    `${emojiStrip(state.played)}\n` +
+    `${location.origin}`;
   try {
     await navigator.clipboard.writeText(txt);
     flashToast("הועתק ללוח", "ok");
@@ -475,6 +540,109 @@ function startCountdown() {
       if (el) el.textContent = txt;
     }
   }, 1000);
+}
+
+// ─── Stats modal ────────────────────────────────────────────────────────────
+async function openStats() {
+  showSpinner(true);
+  let s;
+  try {
+    s = await fetchJSON(`/api/me/stats?player_id=${encodeURIComponent(playerId)}`);
+  } catch {
+    flashToast("טעינת סטטיסטיקות נכשלה");
+    showSpinner(false);
+    return;
+  }
+  showSpinner(false);
+  document.getElementById("stat-games").textContent = s.games_played;
+  document.getElementById("stat-streak").textContent = s.current_streak;
+  document.getElementById("stat-max").textContent = s.max_streak;
+  document.getElementById("stat-avg").textContent = s.avg_score;
+  const hist = document.getElementById("histogram");
+  const labels = ["0-200", "200-400", "400-600", "600-800", "800-1000"];
+  const max = Math.max(1, ...s.histogram);
+  hist.innerHTML = s.histogram.map((n, i) =>
+    `<div class="hist-row-bar">
+       <span class="hist-label">${labels[i]}</span>
+       <div class="hist-bar" style="width:${(n / max) * 100}%">${n || ""}</div>
+     </div>`).join("");
+  showCard("stats-card");
+}
+
+// ─── How-to-play modal ──────────────────────────────────────────────────────
+function openHowto(start) {
+  state._howtoIdx = start || 0;
+  paintHowto();
+  showCard("howto-card");
+}
+function moveHowto(delta) {
+  const next = state._howtoIdx + delta;
+  if (next < 0) return;
+  if (next > 2) {
+    localStorage.setItem("israelle_seen_howto", "1");
+    showCard("start-card");
+    return;
+  }
+  state._howtoIdx = next;
+  paintHowto();
+}
+function paintHowto() {
+  const slides = document.querySelectorAll(".howto-slide");
+  slides.forEach((s) => s.classList.toggle("hidden", Number(s.dataset.i) !== state._howtoIdx));
+  document.getElementById("btn-howto-prev").classList.toggle("hidden", state._howtoIdx === 0);
+  document.getElementById("btn-howto-next").textContent = state._howtoIdx === 2 ? "התחל" : "הבא";
+  const dots = document.getElementById("howto-dots");
+  dots.innerHTML = [0, 1, 2].map((i) => `<span class="dot${i === state._howtoIdx ? " on" : ""}"></span>`).join("");
+}
+
+// ─── Toggles ────────────────────────────────────────────────────────────────
+function toggleSound() {
+  soundOn = !soundOn;
+  localStorage.setItem("israelle_sound", soundOn ? "on" : "off");
+  applyToggleVisuals();
+  if (soundOn) chime(800);
+}
+function toggleCB() {
+  cbOn = !cbOn;
+  localStorage.setItem("israelle_cb", cbOn ? "on" : "off");
+  applyToggleVisuals();
+  // refresh emoji strip if visible
+  const strip = document.getElementById("emoji-strip");
+  if (strip && strip.textContent) strip.textContent = emojiStrip(state.played);
+}
+function applyToggleVisuals() {
+  const s = document.getElementById("btn-sound");
+  const c = document.getElementById("btn-colorblind");
+  if (s) s.textContent = soundOn ? "🔊" : "🔇";
+  if (c) c.style.opacity = cbOn ? "1" : "0.55";
+}
+
+// ─── Sound (Web Audio chime) ────────────────────────────────────────────────
+function chime(freq = 880) {
+  if (!soundOn) return;
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.frequency.value = freq;
+    o.type = "sine";
+    g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.25, audioCtx.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.35);
+    o.connect(g).connect(audioCtx.destination);
+    o.start();
+    o.stop(audioCtx.currentTime + 0.36);
+  } catch {}
+}
+
+// ─── Fetch + spinner ────────────────────────────────────────────────────────
+async function fetchJSON(url, opts) {
+  const r = await fetch(url, opts);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+function showSpinner(on) {
+  document.getElementById("spinner").classList.toggle("hidden", !on);
 }
 
 init();

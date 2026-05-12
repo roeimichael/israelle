@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -21,10 +21,16 @@ DATA = Path(__file__).parent.parent / "data"
 ISRAEL_BORDER = json.loads((DATA / "israel.geojson").read_text(encoding="utf-8"))
 
 IL_TZ = ZoneInfo("Asia/Jerusalem")
+# Day #1 of IsraelE. All future "puzzle numbers" are (today - EPOCH).days + 1.
+EPOCH = date(2026, 5, 12)
 
 
 def _il_today_iso() -> str:
     return datetime.now(IL_TZ).date().isoformat()
+
+
+def _day_number(d_iso: str) -> int:
+    return (date.fromisoformat(d_iso) - EPOCH).days + 1
 
 
 def _jwt(request: Request) -> str | None:
@@ -45,8 +51,8 @@ def israel_border():
 
 @app.get("/api/today")
 def today():
-    date = _il_today_iso()
-    place_ids = supa.rpc("pick_or_create_daily", {"p_date": date})
+    d = _il_today_iso()
+    place_ids = supa.rpc("pick_or_create_daily", {"p_date": d})
     rounds = []
     for ix, pid in enumerate(place_ids):
         p = places.get(int(pid))
@@ -59,7 +65,7 @@ def today():
             "category": p["category"],
             "multiplier": p["multiplier"],
         })
-    return {"date": date, "rounds": rounds}
+    return {"date": d, "day_number": _day_number(d), "rounds": rounds}
 
 
 @app.get("/api/today/me")
@@ -212,6 +218,68 @@ def history(request: Request):
         limit=60,
     )
     return {"games": games, "player_name": players[0]["name"]}
+
+
+@app.get("/api/me/stats")
+def my_stats(player_id: str):
+    """Returns games played, current streak, max streak, score histogram.
+    Works anonymously (player_id from localStorage is enough)."""
+    rows = supa.select(
+        "games",
+        select="puzzle_date,total_score",
+        player_id=f"eq.{player_id}",
+        order="puzzle_date.desc",
+    )
+    if not rows:
+        return {"games_played": 0, "current_streak": 0, "max_streak": 0,
+                "avg_score": 0, "best_score": 0, "histogram": [0]*5}
+
+    dates = sorted({r["puzzle_date"] for r in rows}, reverse=True)
+    scores = [r["total_score"] for r in rows]
+    today_iso = _il_today_iso()
+    # streaks
+    from datetime import timedelta
+    def streak_from(start_iso: str) -> int:
+        cur = date.fromisoformat(start_iso)
+        n = 0
+        ds = set(date.fromisoformat(x) for x in dates)
+        while cur in ds:
+            n += 1
+            cur -= timedelta(days=1)
+        return n
+    # current: start counting back from today (or yesterday if today not played)
+    current = streak_from(today_iso)
+    if current == 0:
+        yest = (date.fromisoformat(today_iso) - timedelta(days=1)).isoformat()
+        current = streak_from(yest)
+    # max: longest consecutive run in dates set
+    max_s = 0
+    ds_set = set(date.fromisoformat(x) for x in dates)
+    for d_ in ds_set:
+        if (d_ - timedelta(days=1)) in ds_set:
+            continue  # not a run start
+        n = 0
+        cur = d_
+        while cur in ds_set:
+            n += 1
+            cur += timedelta(days=1)
+        if n > max_s:
+            max_s = n
+
+    # 5-bucket histogram: 0-200, 200-400, 400-600, 600-800, 800-1000
+    histogram = [0] * 5
+    for s in scores:
+        bucket = min(4, s // 200)
+        histogram[bucket] += 1
+
+    return {
+        "games_played": len(rows),
+        "current_streak": current,
+        "max_streak": max_s,
+        "avg_score": round(sum(scores) / len(scores)),
+        "best_score": max(scores),
+        "histogram": histogram,
+    }
 
 
 @app.get("/api/leaderboard")

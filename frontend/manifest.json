@@ -1,0 +1,17 @@
+{
+  "name": "IsraelE",
+  "short_name": "IsraelE",
+  "description": "פאזל יומי של מקומות בישראל",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0c1014",
+  "theme_color": "#0a1424",
+  "orientation": "any",
+  "icons": [
+    { "src": "/docs/flag.png", "sizes": "640x466", "type": "image/png", "purpose": "any" },
+    { "src": "/docs/flag.png", "sizes": "640x466", "type": "image/png", "purpose": "maskable" }
+  ]
+}

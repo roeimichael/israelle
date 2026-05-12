@@ -11,6 +11,11 @@
 <meta property="og:type" content="website" />
 <meta name="twitter:card" content="summary_large_image" />
 <link rel="icon" type="image/png" href="/docs/flag.png" />
+<link rel="manifest" href="/static/manifest.json" />
+<meta name="theme-color" content="#0a1424" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<link rel="apple-touch-icon" href="/docs/flag.png" />
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 <link href="/static/style.css" rel="stylesheet" />
 </head>
@@ -26,6 +31,7 @@
 
 <div id="hud" class="hidden">
   <div id="round-info">
+    <span id="day-num"></span>
     <span id="round-num"></span>
     <span id="round-mult"></span>
     <span id="round-score"></span>
@@ -40,8 +46,14 @@
 
   <!-- start card -->
   <div id="start-card" class="card">
+    <div class="card-toolbar">
+      <button class="icon-btn" id="btn-help" title="איך משחקים">?</button>
+      <button class="icon-btn" id="btn-stats" title="סטטיסטיקות">📊</button>
+      <button class="icon-btn" id="btn-sound" title="צליל">🔊</button>
+      <button class="icon-btn" id="btn-colorblind" title="עיוורון צבעים">🎨</button>
+    </div>
     <img class="flag-icon" src="/docs/flag.png" alt="דגל ישראל" />
-    <h1>IsraelE</h1>
+    <h1>IsraelE <span id="day-num-start" class="day-tag"></span></h1>
     <p>פאזל יומי. כל יום 6 מקומות חדשים. כולם משחקים את אותו הסט.</p>
     <div class="mult-legend">
       <div><span class="m1">×1</span> 2 ערים · עד 100 כ״א</div>
@@ -111,7 +123,53 @@
     <button id="btn-lb-close">סגור</button>
   </div>
 
+  <!-- stats modal -->
+  <div id="stats-card" class="card hidden">
+    <h2>סטטיסטיקות</h2>
+    <div class="stat-row">
+      <div class="stat"><b id="stat-games">0</b><span>משחקים</span></div>
+      <div class="stat"><b id="stat-streak">0</b><span>רצף נוכחי</span></div>
+      <div class="stat"><b id="stat-max">0</b><span>רצף שיא</span></div>
+      <div class="stat"><b id="stat-avg">0</b><span>ממוצע</span></div>
+    </div>
+    <h3 class="hist-title">פיזור ניקוד</h3>
+    <div id="histogram"></div>
+    <button id="btn-stats-close">סגור</button>
+  </div>
+
+  <!-- how-to-play modal -->
+  <div id="howto-card" class="card hidden">
+    <div id="howto-slides">
+      <div class="howto-slide" data-i="0">
+        <h2>איך משחקים?</h2>
+        <p>בכל סבב יופיע שם של מקום בישראל. <b>לחצו על המפה</b> איפה לדעתכם הוא נמצא.</p>
+      </div>
+      <div class="howto-slide hidden" data-i="1">
+        <h2>ניקוד</h2>
+        <p>ככל שלחצתם <b>קרוב יותר</b>, יותר נקודות. עד 250 לסבב בודד, עד <b>1000</b> בכל יום.</p>
+        <div class="mult-legend small">
+          <div><span class="m1">×1</span> 2 ערים</div>
+          <div><span class="m2">×1.5</span> 2 יישובים</div>
+          <div><span class="m3">×2.5</span> 2 אתרים</div>
+        </div>
+      </div>
+      <div class="howto-slide hidden" data-i="2">
+        <h2>פאזל יומי</h2>
+        <p>כולם משחקים את אותם 6 מקומות. הפאזל מתחלף ב-<b>00:00</b> שעון ישראל.</p>
+        <p>אפשר לשתף את התוצאה כמו בוורדל ולהשוות לחברים.</p>
+      </div>
+    </div>
+    <div id="howto-nav">
+      <button id="btn-howto-prev" class="ghost">חזור</button>
+      <span id="howto-dots"></span>
+      <button id="btn-howto-next">הבא</button>
+    </div>
+  </div>
+
 </div>
+
+<!-- loading spinner -->
+<div id="spinner" class="hidden"><div class="spinner-ring"></div></div>
 
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
