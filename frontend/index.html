@@ -22,11 +22,19 @@
 <body>
 <div id="map"></div>
 
-<!-- top-right user chip -->
-<div id="user-chip" class="hidden">
-  <span id="user-name"></span>
-  <button id="btn-history" title="היסטוריה">📊</button>
-  <button id="btn-signout" title="התנתק">↪</button>
+<!-- floating top bar: always visible -->
+<div id="topbar">
+  <div id="user-chip" class="hidden">
+    <span id="user-name"></span>
+    <button id="btn-history" title="היסטוריה">📜</button>
+    <button id="btn-signout" title="התנתק">↪</button>
+  </div>
+  <div id="toolbar">
+    <button class="tb-btn" id="btn-help" title="איך משחקים">?</button>
+    <button class="tb-btn" id="btn-stats" title="סטטיסטיקות">📊</button>
+    <button class="tb-btn" id="btn-sound" title="צליל">🔊</button>
+    <button class="tb-btn" id="btn-colorblind" title="עיוורון צבעים">🎨</button>
+  </div>
 </div>
 
 <div id="hud" class="hidden">
@@ -46,14 +54,11 @@
 
   <!-- start card -->
   <div id="start-card" class="card">
-    <div class="card-toolbar">
-      <button class="icon-btn" id="btn-help" title="איך משחקים">?</button>
-      <button class="icon-btn" id="btn-stats" title="סטטיסטיקות">📊</button>
-      <button class="icon-btn" id="btn-sound" title="צליל">🔊</button>
-      <button class="icon-btn" id="btn-colorblind" title="עיוורון צבעים">🎨</button>
-    </div>
     <img class="flag-icon" src="/docs/flag.png" alt="דגל ישראל" />
-    <h1>IsraelE <span id="day-num-start" class="day-tag"></span></h1>
+    <div class="title-row">
+      <h1>IsraelE</h1>
+      <span id="day-num-start" class="day-tag"></span>
+    </div>
     <p>פאזל יומי. כל יום 6 מקומות חדשים. כולם משחקים את אותו הסט.</p>
     <div class="mult-legend">
       <div><span class="m1">×1</span> 2 ערים · עד 100 כ״א</div>
@@ -164,6 +169,7 @@
       <span id="howto-dots"></span>
       <button id="btn-howto-next">הבא</button>
     </div>
+    <button id="btn-howto-skip" class="link-btn">דלגו ←</button>
   </div>
 
 </div>

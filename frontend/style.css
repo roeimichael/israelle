@@ -72,9 +72,19 @@ body { background: var(--bg); }
 .card::after { bottom: 0; }
 
 .card h1 {
-  margin: 0 0 12px; font-size: 38px; letter-spacing: -1px;
+  margin: 0; font-size: 40px; letter-spacing: -1.5px;
   background: linear-gradient(135deg, var(--il-blue-light) 0%, var(--il-white) 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.title-row {
+  display: flex; align-items: baseline; justify-content: center; gap: 10px;
+  margin: 0 0 14px;
+}
+.title-row .day-tag {
+  font-size: 16px; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+  background: rgba(77, 125, 240, 0.18); color: var(--il-blue-light);
+  border: 1px solid rgba(77, 125, 240, 0.4);
+  -webkit-text-fill-color: var(--il-blue-light);
 }
 .card h2 { margin: 0 0 12px; font-size: 42px; color: var(--il-blue-light); font-weight: 700; }
 .card p { opacity: 0.75; line-height: 1.5; }
@@ -183,21 +193,44 @@ button:active { transform: translateY(0); }
 }
 .comet-head.fading { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
 
-/* User chip (top-right when signed in) */
+/* ─── Floating topbar (always visible) ──────────────────────────────── */
+#topbar {
+  position: fixed; top: 14px; left: 14px; right: 14px;
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; pointer-events: none; z-index: 8;
+}
+#topbar > * { pointer-events: auto; }
+
 #user-chip {
-  position: absolute; top: 14px; left: 14px;  /* RTL: left edge = visual right */
   display: flex; align-items: center; gap: 8px;
   background: rgba(15, 18, 22, 0.85);
   border: 1px solid rgba(77, 125, 240, 0.25);
-  padding: 6px 12px; border-radius: 999px;
+  padding: 6px 14px; border-radius: 999px;
   font-size: 13px; color: var(--text);
-  backdrop-filter: blur(8px); z-index: 6;
+  backdrop-filter: blur(10px);
 }
 #user-chip button {
   background: transparent; padding: 4px 6px; margin: 0; font-size: 14px;
-  border-radius: 6px;
+  border-radius: 6px; min-width: auto;
 }
-#user-chip button:hover { background: rgba(77, 125, 240, 0.25); }
+#user-chip button:hover { background: rgba(77, 125, 240, 0.25); transform: none; box-shadow: none; }
+
+#toolbar {
+  display: inline-flex; gap: 6px;
+  background: rgba(15, 18, 22, 0.85);
+  border: 1px solid rgba(77, 125, 240, 0.25);
+  padding: 6px; border-radius: 14px;
+  backdrop-filter: blur(10px);
+  margin-right: auto;  /* in RTL flex this pushes toolbar to visual left */
+}
+.tb-btn {
+  background: transparent; color: var(--text);
+  border: none; padding: 6px 10px; margin: 0;
+  border-radius: 8px; font-size: 15px; line-height: 1; min-width: 34px;
+  cursor: pointer; transition: background 0.15s, transform 0.1s;
+}
+.tb-btn:hover { background: rgba(77, 125, 240, 0.25); transform: translateY(-1px); box-shadow: none; }
+.tb-btn:active { transform: translateY(0); }
 
 /* Google sign-in button */
 .btn-google {
@@ -243,26 +276,20 @@ button:active { transform: translateY(0); }
 
 #toast[data-kind="ok"] { background: rgba(72, 187, 120, 0.96); }
 
-/* ─── Start-card toolbar (top of card) ───────────────────────────────── */
-.card-toolbar {
-  position: absolute; top: 10px; left: 12px; right: 12px;
-  display: flex; justify-content: space-between; gap: 6px;
-  z-index: 1;
-}
-.card-toolbar .icon-btn {
-  background: rgba(77, 125, 240, 0.12); border: 1px solid rgba(77, 125, 240, 0.25);
-  color: var(--text); margin: 0; padding: 4px 8px; font-size: 14px;
-  border-radius: 8px; min-width: 32px;
-}
-.card-toolbar .icon-btn:hover { background: rgba(77, 125, 240, 0.3); transform: none; box-shadow: none; }
-
-.day-tag {
-  display: inline-block; margin-right: 6px;
-  font-size: 16px; color: var(--text-dim);
-  font-weight: 500; vertical-align: middle;
-  -webkit-text-fill-color: var(--text-dim); /* override gradient on parent */
-}
 #day-num { color: var(--il-blue-light); font-weight: 700; }
+
+/* Howto skip link + nicer card padding */
+.link-btn {
+  background: transparent; color: var(--text-dim); padding: 6px 10px;
+  margin: 12px 0 0; font-size: 13px; text-decoration: underline; min-width: 0;
+  border: none;
+}
+.link-btn:hover { color: var(--il-blue-light); transform: none; background: transparent; box-shadow: none; }
+
+/* Slightly more breathing room around the start card content */
+#start-card { padding-top: 28px; }
+.mult-legend > div { padding: 4px 0; }
+.flag-icon { width: 80px; margin-bottom: 6px; }
 
 /* ─── Spinner ────────────────────────────────────────────────────────── */
 #spinner {
@@ -332,8 +359,9 @@ button:active { transform: translateY(0); }
   #prompt { font-size: 17px; }
   #round-info { gap: 10px; font-size: 11px; }
   .stat-row { grid-template-columns: repeat(2, 1fr); }
-  .card-toolbar { top: 8px; }
-  .card-toolbar .icon-btn { padding: 3px 6px; min-width: 28px; font-size: 13px; }
+  #topbar { top: 8px; left: 8px; right: 8px; gap: 8px; }
+  .tb-btn { padding: 5px 8px; min-width: 30px; font-size: 13px; }
+  #user-chip { padding: 4px 10px; font-size: 12px; }
   #emoji-strip { font-size: 22px; letter-spacing: 3px; }
   #end-actions { flex-direction: column; }
   #end-actions button { width: 100%; }

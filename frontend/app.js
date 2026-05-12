@@ -110,6 +110,7 @@ async function init() {
   document.getElementById("btn-colorblind").onclick = toggleCB;
   document.getElementById("btn-howto-next").onclick = () => moveHowto(+1);
   document.getElementById("btn-howto-prev").onclick = () => moveHowto(-1);
+  document.getElementById("btn-howto-skip").onclick = skipHowto;
 
   startCountdown();
   await fetchDayNumber();
@@ -579,12 +580,15 @@ function moveHowto(delta) {
   const next = state._howtoIdx + delta;
   if (next < 0) return;
   if (next > 2) {
-    localStorage.setItem("israelle_seen_howto", "1");
-    showCard("start-card");
+    skipHowto();
     return;
   }
   state._howtoIdx = next;
   paintHowto();
+}
+function skipHowto() {
+  localStorage.setItem("israelle_seen_howto", "1");
+  showCard("start-card");
 }
 function paintHowto() {
   const slides = document.querySelectorAll(".howto-slide");
