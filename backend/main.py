@@ -129,15 +129,22 @@ def today_guess(body: GuessIn, request: Request):
     base = base_score(dist)
     round_score = round(base * p["multiplier"])
 
-    # Resolve auth (optional)
-    auth_user_id = supa.verify_jwt(_jwt(request) or "")
+    # Resolve auth (optional). When signed in, forward the user's JWT so RLS
+    # sees auth.uid() = their id; anon writes still go through the publishable key.
+    jwt = _jwt(request)
+    auth_user_id = supa.verify_jwt(jwt or "")
+    user_jwt = jwt if auth_user_id else None
 
     # 1) Upsert player. Ignore-duplicates so the row exists, then patch name/auth.
     try:
         row = {"id": body.player_id, "name": body.name or "אנונימי"}
         if auth_user_id:
             row["auth_user_id"] = auth_user_id
-        supa.insert("players", row, prefer="return=minimal,resolution=ignore-duplicates")
+        supa.insert(
+            "players", row,
+            prefer="return=minimal,resolution=ignore-duplicates",
+            jwt=user_jwt,
+        )
     except httpx.HTTPStatusError:
         pass
     patch = {}
@@ -146,13 +153,14 @@ def today_guess(body: GuessIn, request: Request):
     if auth_user_id:
         patch["auth_user_id"] = auth_user_id
     if patch:
-        supa.update("players", {"id": f"eq.{body.player_id}"}, patch)
+        supa.update("players", {"id": f"eq.{body.player_id}"}, patch, jwt=user_jwt)
 
     # 2) Upsert game row (one per player per day).
     game_row = supa.upsert(
         "games",
         {"player_id": body.player_id, "puzzle_date": date, "total_score": 0},
         on_conflict="player_id,puzzle_date",
+        jwt=user_jwt,
     )
     game_id = game_row[0]["id"]
 
@@ -171,6 +179,7 @@ def today_guess(body: GuessIn, request: Request):
                 "round_score": round_score,
             },
             prefer="return=minimal",
+            jwt=user_jwt,
         )
     except httpx.HTTPStatusError as e:
         if e.response is not None and "23505" in e.response.text:
@@ -180,7 +189,7 @@ def today_guess(body: GuessIn, request: Request):
     # 4) Recompute total from rows (cheap; ≤6 rows).
     rows = supa.select("guesses", select="round_score", game_id=f"eq.{game_id}")
     total = sum(r["round_score"] for r in rows)
-    supa.update("games", {"id": f"eq.{game_id}"}, {"total_score": total})
+    supa.update("games", {"id": f"eq.{game_id}"}, {"total_score": total}, jwt=user_jwt)
 
     return {
         "distance_km": round(dist, 2),

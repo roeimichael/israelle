@@ -29,17 +29,25 @@ def rpc(name: str, params: dict):
     return r.json()
 
 
-def insert(table: str, row: dict | list[dict], prefer: str = "return=representation"):
-    r = _c().post(f"/rest/v1/{table}", json=row, headers={"Prefer": prefer})
+def _auth_header(jwt: str | None) -> dict:
+    """When acting on behalf of a signed-in user, forward their JWT so RLS
+    sees auth.uid() = their id. Otherwise we stay on the publishable/anon key."""
+    return {"Authorization": f"Bearer {jwt}"} if jwt else {}
+
+
+def insert(table: str, row: dict | list[dict], prefer: str = "return=representation", jwt: str | None = None):
+    headers = {"Prefer": prefer, **_auth_header(jwt)}
+    r = _c().post(f"/rest/v1/{table}", json=row, headers=headers)
     r.raise_for_status()
     return r.json() if r.text else None
 
 
-def upsert(table: str, row: dict, on_conflict: str, prefer: str = "return=representation"):
+def upsert(table: str, row: dict, on_conflict: str, prefer: str = "return=representation", jwt: str | None = None):
+    headers = {"Prefer": f"resolution=merge-duplicates,{prefer}", **_auth_header(jwt)}
     r = _c().post(
         f"/rest/v1/{table}",
         json=row,
-        headers={"Prefer": f"resolution=merge-duplicates,{prefer}"},
+        headers=headers,
         params={"on_conflict": on_conflict},
     )
     r.raise_for_status()
@@ -52,8 +60,8 @@ def select(table: str, **params):
     return r.json()
 
 
-def update(table: str, filters: dict, patch: dict):
-    r = _c().patch(f"/rest/v1/{table}", params=filters, json=patch)
+def update(table: str, filters: dict, patch: dict, jwt: str | None = None):
+    r = _c().patch(f"/rest/v1/{table}", params=filters, json=patch, headers=_auth_header(jwt))
     r.raise_for_status()
     return r.json() if r.text else None
 
