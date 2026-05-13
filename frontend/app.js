@@ -204,14 +204,17 @@ function animateCardIn(cardId) {
 function renderUserChip() {
   const chip = document.getElementById("user-chip");
   const signinArea = document.getElementById("signin-area");
+  const statsBtn = document.getElementById("btn-stats");
   if (session) {
     chip.classList.remove("hidden");
     document.getElementById("user-name").textContent =
       session.user.user_metadata?.full_name || session.user.email || "";
     signinArea?.classList.add("hidden");
+    statsBtn?.classList.remove("hidden");
   } else {
     chip.classList.add("hidden");
     signinArea?.classList.remove("hidden");
+    statsBtn?.classList.add("hidden");   // stats gated to signed-in users
   }
 }
 
@@ -366,9 +369,6 @@ async function onMapClick(e) {
 
   state.totalScore = res.total_score;
   state.played.push({ ...res, name_he: state.rounds[state.cursor].name_he });
-  // chime on a "good" guess (>=80% of max for this round's multiplier)
-  const r = state.rounds[state.cursor];
-  if (res.round_score / (100 * r.multiplier) >= 0.8) chime(1100);
 
   const truthLngLat = [res.true_lon, res.true_lat];
   drawPolygon(res.polygon);
@@ -390,7 +390,6 @@ async function onMapClick(e) {
   state.truthMarker = new maplibregl.Marker({ element: makeDot("truth") })
     .setLngLat(truthLngLat).addTo(map);
   popMarker(state.truthMarker, true);
-  chime(880);
 
   await sleep(450);
   showReveal(res);
