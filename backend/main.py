@@ -317,6 +317,14 @@ app.mount("/static", StaticFiles(directory=str(FRONTEND)), name="static")
 app.mount("/docs", StaticFiles(directory=str(DOCS)), name="docs")
 
 
+@app.middleware("http")
+async def no_cache_static(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith(("/static/", "/")) and not request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return response
+
+
 @app.get("/")
 def index():
-    return FileResponse(FRONTEND / "index.html")
+    return FileResponse(FRONTEND / "index.html", headers={"Cache-Control": "no-cache, must-revalidate"})

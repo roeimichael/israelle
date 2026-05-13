@@ -100,7 +100,7 @@ async function init() {
   document.getElementById("btn-name-save").onclick = onSaveName;
 
   // toolbar
-  document.getElementById("btn-help").onclick = () => openHowto(0);
+  document.getElementById("btn-help").onclick = () => openHowto(0, true);
   document.getElementById("btn-stats").onclick = openStats;
   document.getElementById("btn-stats-close").onclick = closeModal;
   document.getElementById("btn-sound").onclick = toggleSound;
@@ -109,10 +109,12 @@ async function init() {
   document.getElementById("btn-howto-skip").onclick = skipHowto;
 
   startCountdown();
-  await fetchDayNumber();
+  const alreadyDone = await loadTodayIntoState();
 
   // render Lucide icons
   if (window.lucide?.createIcons) window.lucide.createIcons();
+
+  if (alreadyDone) return; // end card already shown
 
   // first-visit howto
   if (!localStorage.getItem("israelle_seen_howto")) {
@@ -120,6 +122,29 @@ async function init() {
   } else {
     animateCardIn("start-card");
   }
+}
+
+async function loadTodayIntoState() {
+  try {
+    const [t, me] = await Promise.all([
+      fetchJSON("/api/today"),
+      fetchJSON(`/api/today/me?player_id=${encodeURIComponent(playerId)}`),
+    ]);
+    state.dayNumber = t.day_number;
+    state.date = t.date;
+    state.rounds = t.rounds;
+    const tag = document.getElementById("day-num-start");
+    if (tag) tag.textContent = `#${t.day_number}`;
+    if (me.done) {
+      state.played = me.guesses || [];
+      state.totalScore = me.total_score || 0;
+      showEnd(true);
+      return true;
+    }
+  } catch (e) {
+    console.warn("today load failed", e);
+  }
+  return false;
 }
 
 function animateCardIn(cardId) {
@@ -135,14 +160,6 @@ function animateCardIn(cardId) {
   });
 }
 
-async function fetchDayNumber() {
-  try {
-    const t = await fetch("/api/today").then((r) => r.json());
-    state.dayNumber = t.day_number;
-    state.date = t.date;
-    document.getElementById("day-num-start").textContent = `#${t.day_number}`;
-  } catch {}
-}
 
 // ─── Auth UI ────────────────────────────────────────────────────────────────
 function renderUserChip() {
@@ -671,10 +688,11 @@ async function openStats() {
 }
 
 // ─── How-to-play modal ──────────────────────────────────────────────────────
-function openHowto(start) {
+function openHowto(start, asModal = false) {
   state._howtoIdx = start || 0;
   paintHowto();
-  showCard("howto-card");
+  if (asModal) openModal("howto-card");
+  else showCard("howto-card");
 }
 function moveHowto(delta) {
   const next = state._howtoIdx + delta;
@@ -688,7 +706,8 @@ function moveHowto(delta) {
 }
 function skipHowto() {
   localStorage.setItem("israelle_seen_howto", "1");
-  showCard("start-card");
+  if (_modalSnap) closeModal();
+  else showCard("start-card");
 }
 function paintHowto() {
   const slides = document.querySelectorAll(".howto-slide");
