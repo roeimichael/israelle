@@ -129,15 +129,31 @@ async function init() {
   // render Lucide icons
   if (window.lucide?.createIcons) window.lucide.createIcons();
 
-  if (alreadyDone) return; // end card already shown
-
   // first-visit howto
-  if (!localStorage.getItem("israelle_seen_howto")) {
-    openHowto(0);
-  } else {
-    animateCardIn("start-card");
+  if (!alreadyDone) {
+    if (!localStorage.getItem("israelle_seen_howto")) {
+      openHowto(0);
+    } else {
+      animateCardIn("start-card");
+    }
   }
+
+  hideSplash();
 }
+
+function hideSplash() {
+  const s = document.getElementById("splash");
+  if (!s) return;
+  s.classList.add("fading");
+  setTimeout(() => s.remove(), 600);
+}
+
+// Failsafe: don't leave the user staring at a forever-spinning star even if
+// Render is cold-starting. ~25 s comfortably covers a warm dyno + most cold ones.
+setTimeout(() => {
+  const s = document.getElementById("splash");
+  if (s && !s.classList.contains("fading")) hideSplash();
+}, 25000);
 
 async function loadTodayIntoState() {
   try {

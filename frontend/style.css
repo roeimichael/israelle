@@ -22,6 +22,41 @@ body { background: var(--bg); }
 
 #map { position: absolute; inset: 0; }
 
+/* ─── Splash / first-paint loader ─── */
+#splash {
+  position: fixed; inset: 0; z-index: 100;
+  background: radial-gradient(ellipse at center, #0e1828 0%, #060810 70%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 22px;
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+#splash.fading { opacity: 0; visibility: hidden; pointer-events: none; }
+.magen-david {
+  animation: md-spin 2.4s linear infinite, md-glow 1.6s ease-in-out infinite;
+  transform-origin: 50% 50%;
+}
+.magen-david polygon { transform-origin: 50% 50%; transform-box: fill-box; }
+.magen-david polygon:first-of-type {
+  animation: md-counter 4.8s ease-in-out infinite;
+}
+.splash-label {
+  font-size: 26px; font-weight: 800; letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #a3c0ff 0%, #ffffff 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  opacity: 0.85;
+}
+@keyframes md-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes md-counter {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@keyframes md-glow {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(77, 125, 240, 0.45)); }
+  50%      { filter: drop-shadow(0 0 22px rgba(77, 125, 240, 0.95)); }
+}
+
 /* ─── HUD (top banner during play) ─── */
 #hud {
   position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
