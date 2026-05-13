@@ -569,16 +569,13 @@ function emojiStrip(played) {
 function buildShareText() {
   const games = state.played.slice().sort((a, b) => a.round_idx - b.round_idx);
   const line = games
-    .map((g) => {
-      const max = 100 * (g.multiplier || state.rounds[g.round_idx]?.multiplier || 1);
-      return `${g.round_score}${scoreEmoji(g.round_score / max)}`;
-    })
+    .map((g) => `${g.base_score}${scoreEmoji(g.base_score / 100)}`)
     .join(" ");
   return (
-    `IsraelE #${state.dayNumber}\n` +
+    `בוא נראה כמה אתה מכיר את ישראל ${location.origin}\n` +
+    `\n` +
     `${line}\n` +
-    `ניקוד סופי: ${state.totalScore}/1000\n` +
-    `${location.origin}`
+    `ניקוד סופי: ${state.totalScore}/1000`
   );
 }
 
