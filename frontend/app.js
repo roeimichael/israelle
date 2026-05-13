@@ -544,6 +544,9 @@ function showReveal(res) {
     `${res.base_score} × ${res.multiplier}`;
   document.getElementById("reveal-place").textContent =
     state.rounds[state.cursor].name_he;
+  const descEl = document.getElementById("reveal-desc");
+  descEl.textContent = res.description || "";
+  descEl.classList.toggle("hidden", !res.description);
   document.getElementById("reveal-dist").textContent = `${res.distance_km} ק״מ ממך`;
   document.getElementById("btn-next").textContent = res.is_last ? "סיכום" : "הבא ←";
   clearPolygon();
@@ -565,12 +568,37 @@ function onNext() {
 
 function showEnd(restored) {
   document.getElementById("emoji-strip").textContent = emojiStrip(state.played);
+  renderPlacesList();
   showCard("end-card");
   if (restored) {
     document.getElementById("final-score").textContent = state.totalScore;
   } else {
     countUp(document.getElementById("final-score"), 0, state.totalScore, 1500);
   }
+}
+
+function renderPlacesList() {
+  const list = document.getElementById("places-list");
+  const title = document.getElementById("places-title");
+  const sorted = state.played.slice().sort((a, b) => a.round_idx - b.round_idx);
+  const anyEnriched = sorted.some((g) => g.description || g.image_url);
+  title.classList.toggle("hidden", !anyEnriched);
+  list.innerHTML = sorted.map((g) => {
+    const img = g.image_url
+      ? `<img src="${escapeHtml(g.image_url)}" alt="${escapeHtml(g.name_he || "")}" loading="lazy" referrerpolicy="no-referrer"/>`
+      : `<div class="no-image">🗺️</div>`;
+    const desc = g.description
+      ? `<div class="place-desc">${escapeHtml(g.description)}</div>`
+      : "";
+    return `
+      <div class="place-tile">
+        <div class="place-img">${img}</div>
+        <div class="place-info">
+          <div class="place-name">${escapeHtml(g.name_he || "")}</div>
+          ${desc}
+        </div>
+      </div>`;
+  }).join("");
 }
 
 function countUp(el, from, to, ms) {

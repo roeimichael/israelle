@@ -23,6 +23,8 @@ def _load() -> dict[int, dict]:
                 "lat": float(row["lat"]),
                 "lon": float(row["lon"]),
                 "importance": float(row["importance"]),
+                "description": row.get("description", ""),
+                "image_url": row.get("image_url", ""),
             }
     return out
 

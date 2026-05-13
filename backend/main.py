@@ -97,6 +97,8 @@ def today_me(player_id: str):
             gs["true_lat"] = p["lat"]
             gs["true_lon"] = p["lon"]
             gs["polygon"] = places.get_polygon(int(gs["place_id"]))
+            gs["description"] = p.get("description", "")
+            gs["image_url"] = p.get("image_url", "")
     return {
         "game_id": g["id"],
         "total_score": g["total_score"],
@@ -203,6 +205,8 @@ def today_guess(body: GuessIn, request: Request):
         "round_idx": body.round_idx,
         "is_last": body.round_idx == 5,
         "game_id": game_id,
+        "description": p.get("description", ""),
+        "image_url": p.get("image_url", ""),
     }
 
 
