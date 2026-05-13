@@ -56,6 +56,9 @@ const state = {
 const PALETTE = ["🇮🇱", "✡️", "🕊️", "🐪", "🌵"];
 
 // ─── Boot ───────────────────────────────────────────────────────────────────
+const _splashStart = performance.now();
+const MIN_SPLASH_MS = 900; // long enough to read the wordmark, short enough not to annoy
+
 async function init() {
   // load config + supabase
   const cfg = await fetch("/api/config").then((r) => r.json());
@@ -138,6 +141,8 @@ async function init() {
     }
   }
 
+  const elapsed = performance.now() - _splashStart;
+  if (elapsed < MIN_SPLASH_MS) await sleep(MIN_SPLASH_MS - elapsed);
   hideSplash();
 }
 
@@ -220,6 +225,12 @@ async function onSignIn() {
 async function onSignOut() {
   if (!sb) return;
   await sb.auth.signOut();
+  // Reset to a fresh guest identity. The signed-in player's score row stays
+  // in the DB (one-shot per auth account), but the browser starts clean so
+  // the user can see the main menu — and play today as a guest if they want.
+  localStorage.removeItem("israelle_player_id");
+  localStorage.removeItem("israelle_player_name");
+  location.reload();
 }
 
 // ─── Israel mask + border ───────────────────────────────────────────────────
