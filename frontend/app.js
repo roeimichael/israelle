@@ -37,7 +37,6 @@ let sb;            // supabase client
 let session = null;
 let playerId, playerName;
 let soundOn = true;
-let cbOn = false;  // colorblind palette
 let audioCtx;
 
 const state = {
@@ -52,9 +51,8 @@ const state = {
   lineId: null, polyId: null,
 };
 
-// Default + colorblind emoji palettes (5 buckets, best → worst)
-const PALETTE_DEFAULT = ["🟩", "🟢", "🟡", "🟠", "🔴"];
-const PALETTE_CB      = ["⬛", "🟦", "⬜", "🟪", "❎"];
+// Emoji palette (5 buckets, best → worst)
+const PALETTE = ["🟩", "🟢", "🟡", "🟠", "🔴"];
 
 // ─── Boot ───────────────────────────────────────────────────────────────────
 async function init() {
@@ -78,7 +76,6 @@ async function init() {
   }
   playerName = localStorage.getItem("israelle_player_name") || "";
   soundOn = localStorage.getItem("israelle_sound") !== "off";
-  cbOn = localStorage.getItem("israelle_cb") === "on";
   applyToggleVisuals();
 
   // map
@@ -96,18 +93,17 @@ async function init() {
   document.getElementById("btn-signin").onclick = onSignIn;
   document.getElementById("btn-signout").onclick = onSignOut;
   document.getElementById("btn-history").onclick = openHistory;
-  document.getElementById("btn-history-close").onclick = () => showCard("start-card");
+  document.getElementById("btn-history-close").onclick = closeModal;
   document.getElementById("btn-leaderboard").onclick = openLeaderboard;
-  document.getElementById("btn-lb-close").onclick = () => showCard("end-card");
+  document.getElementById("btn-lb-close").onclick = closeModal;
   document.getElementById("btn-share").onclick = onShare;
   document.getElementById("btn-name-save").onclick = onSaveName;
 
   // toolbar
   document.getElementById("btn-help").onclick = () => openHowto(0);
   document.getElementById("btn-stats").onclick = openStats;
-  document.getElementById("btn-stats-close").onclick = () => showCard("start-card");
+  document.getElementById("btn-stats-close").onclick = closeModal;
   document.getElementById("btn-sound").onclick = toggleSound;
-  document.getElementById("btn-colorblind").onclick = toggleCB;
   document.getElementById("btn-howto-next").onclick = () => moveHowto(+1);
   document.getElementById("btn-howto-prev").onclick = () => moveHowto(-1);
   document.getElementById("btn-howto-skip").onclick = skipHowto;
@@ -254,9 +250,12 @@ async function onMapClick(e) {
     return;
   }
   state.awaitingClick = false;
+  chime(420);
 
   state.guessMarker = new maplibregl.Marker({ element: makeDot("guess") })
     .setLngLat([lng, lat]).addTo(map);
+  popMarker(state.guessMarker);
+  spawnRipple([lng, lat], "#ffb86b", 3.4, 1100, 2);
 
   const headers = { "Content-Type": "application/json" };
   if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
@@ -282,8 +281,6 @@ async function onMapClick(e) {
 
   const truthLngLat = [res.true_lon, res.true_lat];
   drawPolygon(res.polygon);
-  state.truthMarker = new maplibregl.Marker({ element: makeDot("truth") })
-    .setLngLat(truthLngLat).addTo(map);
 
   const bbox = polygonBbox(res.polygon) ?? [
     [Math.min(lng, res.true_lon), Math.min(lat, res.true_lat)],
@@ -297,6 +294,14 @@ async function onMapClick(e) {
 
   await animateLine([lng, lat], truthLngLat, 3000);
 
+  // Truth reveal: shockwave + bouncy pop
+  spawnRipple(truthLngLat, "#4d7df0", 5.2, 1500, 3);
+  state.truthMarker = new maplibregl.Marker({ element: makeDot("truth") })
+    .setLngLat(truthLngLat).addTo(map);
+  popMarker(state.truthMarker, true);
+  chime(880);
+
+  await sleep(450);
   showReveal(res);
 }
 
@@ -344,7 +349,7 @@ function animateLine(from, to, durationMs) {
     data: { type: "Feature", geometry: { type: "LineString", coordinates: [from, from] } } });
   map.addLayer({ id: state.lineId + "-glow", type: "line", source: state.lineId,
     layout: { "line-cap": "round", "line-join": "round" },
-    paint: { "line-color": "#4d7df0", "line-width": 9, "line-opacity": 0.35, "line-blur": 3 } });
+    paint: { "line-color": "#4d7df0", "line-width": 11, "line-opacity": 0.45, "line-blur": 4 } });
   map.addLayer({ id: state.lineId, type: "line", source: state.lineId,
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": "#ffffff", "line-width": 3, "line-dasharray": [1.5, 1.8], "line-opacity": 0.95 } });
@@ -354,30 +359,81 @@ function animateLine(from, to, durationMs) {
   wrap.appendChild(headEl);
   state.cometMarker = new maplibregl.Marker({ element: wrap }).setLngLat(from).addTo(map);
 
-  const src = map.getSource(state.lineId);
-  const start = performance.now();
-  const ease = (t) => (t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2);
-  return new Promise((resolve) => {
-    function step(t) {
-      const u = Math.min(1, (t - start) / durationMs);
-      const k = ease(u);
-      const lng = from[0] + (to[0] - from[0]) * k;
-      const lat = from[1] + (to[1] - from[1]) * k;
-      src.setData({ type: "Feature", geometry: { type: "LineString", coordinates: [from, [lng, lat]] } });
-      state.cometMarker.setLngLat([lng, lat]);
-      if (u < 1) requestAnimationFrame(step);
-      else {
-        headEl.classList.add("fading");
-        setTimeout(() => { state.cometMarker?.remove(); state.cometMarker = null; }, 400);
-        resolve();
-      }
-    }
-    requestAnimationFrame(step);
+  // gentle continuous pulse on the comet head
+  const pulse = anime.animate(headEl, {
+    scale: [{ from: 0.85, to: 1.25, duration: 480, ease: "inOutSine" }],
+    loop: true, alternate: true,
   });
+
+  const src = map.getSource(state.lineId);
+  const obj = { t: 0 };
+  return new Promise((resolve) => {
+    anime.animate(obj, {
+      t: 1, duration: durationMs, ease: "inOutQuint",
+      onUpdate: () => {
+        const k = obj.t;
+        const lng = from[0] + (to[0] - from[0]) * k;
+        const lat = from[1] + (to[1] - from[1]) * k;
+        src.setData({ type: "Feature", geometry: { type: "LineString", coordinates: [from, [lng, lat]] } });
+        state.cometMarker.setLngLat([lng, lat]);
+      },
+      onComplete: () => {
+        pulse.pause?.();
+        anime.animate(headEl, {
+          scale: [1, 2.4], opacity: [1, 0], duration: 380, ease: "outQuad",
+          onComplete: () => { state.cometMarker?.remove(); state.cometMarker = null; },
+        });
+        resolve();
+      },
+    });
+  });
+}
+
+// ─── Anime.js-driven helpers ────────────────────────────────────────────────
+function popMarker(marker, big = false) {
+  const el = marker.getElement().querySelector(".marker-dot");
+  if (!el || !window.anime) return;
+  anime.animate(el, {
+    scale: [
+      { from: 0, to: big ? 1.9 : 1.5, duration: 240, ease: "outQuad" },
+      { to: 1, duration: 520, ease: big ? "outBack(2.2)" : "outElastic(1, .55)" },
+    ],
+  });
+  const pulseEl = marker.getElement().querySelector(".marker-pulse");
+  if (pulseEl) {
+    anime.animate(pulseEl, {
+      scale: [{ from: 0.4, to: 3 }],
+      opacity: [{ from: 0.7, to: 0 }],
+      duration: 1100, ease: "outCubic", loop: 2,
+    });
+  }
+}
+
+function spawnRipple(lngLat, color = "#4d7df0", maxScale = 3.6, duration = 1300, count = 1) {
+  if (!window.anime) return;
+  for (let i = 0; i < count; i++) {
+    const wrap = document.createElement("div");
+    wrap.className = "marker-wrap";
+    const ring = document.createElement("div");
+    ring.className = "ripple-ring";
+    ring.style.borderColor = color;
+    ring.style.boxShadow = `0 0 18px ${color}88`;
+    wrap.appendChild(ring);
+    const m = new maplibregl.Marker({ element: wrap }).setLngLat(lngLat).addTo(map);
+    anime.animate(ring, {
+      scale: [{ from: 0.2, to: maxScale }],
+      opacity: [{ from: 0.95, to: 0 }],
+      duration,
+      delay: i * 200,
+      ease: "outCubic",
+      onComplete: () => m.remove(),
+    });
+  }
 }
 
 // ─── Reveal / Next / End ────────────────────────────────────────────────────
 function showReveal(res) {
+  chime(660);
   document.getElementById("hud").classList.add("hidden");
   document.getElementById("reveal-score").textContent = `+${res.round_score}`;
   document.getElementById("reveal-breakdown").textContent =
@@ -426,18 +482,17 @@ function countUp(el, from, to, ms) {
 
 // ─── Share / leaderboard / history ──────────────────────────────────────────
 function emojiStrip(played) {
-  const palette = cbOn ? PALETTE_CB : PALETTE_DEFAULT;
   return played
     .slice()
     .sort((a, b) => a.round_idx - b.round_idx)
     .map((g) => {
       const max = 100 * (g.multiplier || state.rounds[g.round_idx]?.multiplier || 1);
       const pct = g.round_score / max;
-      if (pct >= 0.9) return palette[0];
-      if (pct >= 0.75) return palette[1];
-      if (pct >= 0.5) return palette[2];
-      if (pct >= 0.25) return palette[3];
-      return palette[4];
+      if (pct >= 0.9) return PALETTE[0];
+      if (pct >= 0.75) return PALETTE[1];
+      if (pct >= 0.5) return PALETTE[2];
+      if (pct >= 0.25) return PALETTE[3];
+      return PALETTE[4];
     })
     .join("");
 }
@@ -461,7 +516,7 @@ async function openLeaderboard() {
   list.innerHTML = lb.top.length
     ? lb.top.map((row, i) => `<div class="lb-row"><span>#${i + 1}</span><span>${escapeHtml(row.name)}</span><b>${row.score}</b></div>`).join("")
     : "<p>אין עדיין תוצאות.</p>";
-  showCard("lb-card");
+  openModal("lb-card");
 }
 
 async function openHistory() {
@@ -473,7 +528,7 @@ async function openHistory() {
   list.innerHTML = h.games && h.games.length
     ? h.games.map((g) => `<div class="hist-row"><span>${g.puzzle_date}</span><b>${g.total_score}</b></div>`).join("")
     : "<p>עדיין לא שיחקתם.</p>";
-  showCard("history-card");
+  openModal("history-card");
 }
 
 // ─── UI utils ───────────────────────────────────────────────────────────────
@@ -543,7 +598,33 @@ function startCountdown() {
   }, 1000);
 }
 
-// ─── Stats modal ────────────────────────────────────────────────────────────
+// ─── Modals (stats / leaderboard / history) — preserve underlying state ────
+let _modalSnap = null;
+function openModal(cardId) {
+  // Snapshot whatever's currently visible so closeModal can restore it.
+  const overlay = document.getElementById("overlay");
+  const visibleCard = Array.from(overlay.querySelectorAll(".card"))
+    .find((c) => !c.classList.contains("hidden"));
+  _modalSnap = {
+    hudVisible: !document.getElementById("hud").classList.contains("hidden"),
+    cardId: visibleCard ? visibleCard.id : null,
+  };
+  document.getElementById("hud").classList.add("hidden");
+  showCard(cardId);
+}
+function closeModal() {
+  const s = _modalSnap; _modalSnap = null;
+  if (!s) { showCard("start-card"); return; }
+  if (s.hudVisible) {
+    showCard(null);
+    document.getElementById("hud").classList.remove("hidden");
+  } else if (s.cardId) {
+    showCard(s.cardId);
+  } else {
+    showCard("start-card");
+  }
+}
+
 async function openStats() {
   showSpinner(true);
   let s;
@@ -567,7 +648,7 @@ async function openStats() {
        <span class="hist-label">${labels[i]}</span>
        <div class="hist-bar" style="width:${(n / max) * 100}%">${n || ""}</div>
      </div>`).join("");
-  showCard("stats-card");
+  openModal("stats-card");
 }
 
 // ─── How-to-play modal ──────────────────────────────────────────────────────
@@ -604,21 +685,15 @@ function toggleSound() {
   soundOn = !soundOn;
   localStorage.setItem("israelle_sound", soundOn ? "on" : "off");
   applyToggleVisuals();
+  toggleSoundToast();
   if (soundOn) chime(800);
 }
-function toggleCB() {
-  cbOn = !cbOn;
-  localStorage.setItem("israelle_cb", cbOn ? "on" : "off");
-  applyToggleVisuals();
-  // refresh emoji strip if visible
-  const strip = document.getElementById("emoji-strip");
-  if (strip && strip.textContent) strip.textContent = emojiStrip(state.played);
+function toggleSoundToast() {
+  flashToast(`צליל: ${soundOn ? "פעיל" : "כבוי"}`, "ok");
 }
 function applyToggleVisuals() {
   const s = document.getElementById("btn-sound");
-  const c = document.getElementById("btn-colorblind");
   if (s) s.textContent = soundOn ? "🔊" : "🔇";
-  if (c) c.style.opacity = cbOn ? "1" : "0.55";
 }
 
 // ─── Sound (Web Audio chime) ────────────────────────────────────────────────
