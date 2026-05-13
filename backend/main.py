@@ -68,6 +68,58 @@ def today():
     return {"date": d, "day_number": _day_number(d), "rounds": rounds}
 
 
+@app.get("/api/me/today")
+def me_today(request: Request):
+    """Canonical 'have I played today?' lookup by Google identity.
+    Cross-references all player rows linked to auth_user_id, returning the
+    one with today's game (if any) so the client can rebind localStorage."""
+    jwt = _jwt(request)
+    auth_user_id = supa.verify_jwt(jwt) if jwt else None
+    if not auth_user_id:
+        raise HTTPException(401, "sign in required")
+    d = _il_today_iso()
+    players = supa.select("players", select="id,name", auth_user_id=f"eq.{auth_user_id}")
+    if not players:
+        return {"player_id": None, "name": None, "done": False, "guesses": [], "total_score": 0}
+    ids = ",".join(p["id"] for p in players)
+    games = supa.select(
+        "games",
+        select="id,player_id,total_score,completed_at",
+        player_id=f"in.({ids})",
+        puzzle_date=f"eq.{d}",
+    )
+    if not games:
+        return {"player_id": players[0]["id"], "name": players[0]["name"],
+                "done": False, "guesses": [], "total_score": 0}
+    g = games[0]
+    guesses = supa.select(
+        "guesses",
+        select="round_idx,place_id,distance_km,base_score,round_score,guess_lat,guess_lon",
+        game_id=f"eq.{g['id']}",
+        order="round_idx.asc",
+    )
+    for gs in guesses:
+        p = places.get(int(gs["place_id"]))
+        if p:
+            gs["name_he"] = p["name_he"]
+            gs["type"] = p["type"]
+            gs["category"] = p["category"]
+            gs["multiplier"] = p["multiplier"]
+            gs["true_lat"] = p["lat"]
+            gs["true_lon"] = p["lon"]
+            gs["polygon"] = places.get_polygon(int(gs["place_id"]))
+            gs["description"] = p.get("description", "")
+            gs["image_url"] = p.get("image_url", "")
+    owner = next((pl for pl in players if pl["id"] == g["player_id"]), players[0])
+    return {
+        "player_id": g["player_id"],
+        "name": owner["name"],
+        "total_score": g["total_score"],
+        "guesses": guesses,
+        "done": len(guesses) >= 6,
+    }
+
+
 @app.get("/api/today/me")
 def today_me(player_id: str):
     date = _il_today_iso()

@@ -68,7 +68,17 @@ async function init() {
     });
     const { data } = await sb.auth.getSession();
     session = data.session;
-    sb.auth.onAuthStateChange((_evt, s) => { session = s; renderUserChip(); });
+    sb.auth.onAuthStateChange((evt, s) => {
+      const wasSignedOut = !session;
+      session = s;
+      renderUserChip();
+      // On sign-in (not initial load), re-check today's state under the auth
+      // identity — they may have already played today via a different
+      // browser/guest session.
+      if (evt === "SIGNED_IN" && wasSignedOut && s) {
+        resyncForAuth();
+      }
+    });
   }
   renderUserChip();
 
@@ -163,15 +173,40 @@ setTimeout(() => {
 
 async function loadTodayIntoState() {
   try {
-    const [t, me] = await Promise.all([
-      fetchJSON("/api/today"),
-      fetchJSON(`/api/today/me?player_id=${encodeURIComponent(playerId)}`),
-    ]);
+    const t = await fetchJSON("/api/today");
     state.dayNumber = t.day_number;
     state.date = t.date;
     state.rounds = t.rounds;
     const tag = document.getElementById("day-num-start");
     if (tag) tag.textContent = `#${t.day_number}`;
+
+    // Prefer auth identity when signed in: the canonical player_id may differ
+    // from whatever's in localStorage (e.g. user signed out, played as guest,
+    // then signed back in). Backend looks up by auth_user_id, returns the row
+    // that owns today's game if any.
+    let me = null;
+    if (session?.access_token) {
+      try {
+        const authMe = await fetchJSON("/api/me/today", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (authMe.player_id && authMe.player_id !== playerId) {
+          playerId = authMe.player_id;
+          localStorage.setItem("israelle_player_id", playerId);
+        }
+        if (authMe.name) {
+          playerName = authMe.name;
+          localStorage.setItem("israelle_player_name", playerName);
+        }
+        me = authMe;
+      } catch (e) {
+        console.warn("auth /me/today failed, falling back to anon", e);
+      }
+    }
+    if (!me) {
+      me = await fetchJSON(`/api/today/me?player_id=${encodeURIComponent(playerId)}`);
+    }
+
     if (me.done) {
       state.played = me.guesses || [];
       state.totalScore = me.total_score || 0;
@@ -182,6 +217,17 @@ async function loadTodayIntoState() {
     console.warn("today load failed", e);
   }
   return false;
+}
+
+async function resyncForAuth() {
+  // Called after a SIGNED_IN event mid-session. Re-resolve today's state
+  // using auth identity and jump to the end card if the user already played.
+  const wasDone = await loadTodayIntoState();
+  if (wasDone) {
+    // Hide any mid-game UI; showEnd already swapped to end-card.
+    document.getElementById("hud").classList.add("hidden");
+    state.awaitingClick = false;
+  }
 }
 
 function animateCardIn(cardId) {
