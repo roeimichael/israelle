@@ -51,8 +51,9 @@ const state = {
   lineId: null, polyId: null,
 };
 
-// Emoji palette (5 buckets, best → worst)
-const PALETTE = ["🟩", "🟢", "🟡", "🟠", "🔴"];
+// Israel-themed score emojis (5 buckets, best → worst):
+// flag, star of david, dove (peace), camel (desert grind), cactus (סבר/ouch)
+const PALETTE = ["🇮🇱", "✡️", "🕊️", "🐪", "🌵"];
 
 // ─── Boot ───────────────────────────────────────────────────────────────────
 async function init() {
@@ -532,28 +533,23 @@ function countUp(el, from, to, ms) {
 }
 
 // ─── Share / leaderboard / history ──────────────────────────────────────────
+function scoreEmoji(pct) {
+  if (pct >= 0.95) return PALETTE[0]; // 🇮🇱
+  if (pct >= 0.80) return PALETTE[1]; // ✡️
+  if (pct >= 0.60) return PALETTE[2]; // 🕊️
+  if (pct >= 0.30) return PALETTE[3]; // 🐪
+  return PALETTE[4];                  // 🌵
+}
+
 function emojiStrip(played) {
   return played
     .slice()
     .sort((a, b) => a.round_idx - b.round_idx)
     .map((g) => {
       const max = 100 * (g.multiplier || state.rounds[g.round_idx]?.multiplier || 1);
-      const pct = g.round_score / max;
-      if (pct >= 0.9) return PALETTE[0];
-      if (pct >= 0.75) return PALETTE[1];
-      if (pct >= 0.5) return PALETTE[2];
-      if (pct >= 0.25) return PALETTE[3];
-      return PALETTE[4];
+      return scoreEmoji(g.round_score / max);
     })
-    .join("");
-}
-
-function scoreEmoji(pct) {
-  if (pct >= 0.95) return "🎯";
-  if (pct >= 0.80) return "🔥";
-  if (pct >= 0.60) return "🏅";
-  if (pct >= 0.30) return "👍";
-  return "💩";
+    .join(" ");
 }
 
 function buildShareText() {
