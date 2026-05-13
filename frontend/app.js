@@ -151,10 +151,12 @@ function animateCardIn(cardId) {
   if (!window.anime) return;
   const card = document.getElementById(cardId);
   if (!card || card.classList.contains("hidden")) return;
+  card.style.opacity = "0";
+  card.style.transform = "translateY(18px) scale(0.96)";
   anime.animate(card, {
-    opacity: [{ from: 0, to: 1 }],
-    translateY: [{ from: 18, to: 0 }],
-    scale: [{ from: 0.96, to: 1 }],
+    opacity: 1,
+    translateY: 0,
+    scale: 1,
     duration: 520,
     ease: "outCubic",
   });
@@ -396,8 +398,11 @@ function animateLine(from, to, durationMs) {
 
   // gentle continuous pulse on the comet head
   const pulse = anime.animate(headEl, {
-    scale: [{ from: 0.85, to: 1.25, duration: 480, ease: "inOutSine" }],
-    loop: true, alternate: true,
+    scale: 1.25,
+    duration: 480,
+    ease: "inOutSine",
+    loop: true,
+    alternate: true,
   });
 
   const src = map.getSource(state.lineId);
@@ -415,7 +420,10 @@ function animateLine(from, to, durationMs) {
       onComplete: () => {
         pulse.pause?.();
         anime.animate(headEl, {
-          scale: [1, 2.4], opacity: [1, 0], duration: 380, ease: "outQuad",
+          scale: 2.4,
+          opacity: 0,
+          duration: 380,
+          ease: "outQuad",
           onComplete: () => { state.cometMarker?.remove(); state.cometMarker = null; },
         });
         resolve();
@@ -427,19 +435,25 @@ function animateLine(from, to, durationMs) {
 // ─── Anime.js-driven helpers ────────────────────────────────────────────────
 function popMarker(marker, big = false) {
   const el = marker.getElement().querySelector(".marker-dot");
-  if (!el || !window.anime) return;
+  if (!el) return;
+  // Set starting state inline so anime reads it; fallback is visible at scale 1.
+  el.style.transform = "scale(0)";
+  if (!window.anime) { el.style.transform = "scale(1)"; return; }
   anime.animate(el, {
-    scale: [
-      { from: 0, to: big ? 1.9 : 1.5, duration: 240, ease: "outQuad" },
-      { to: 1, duration: 520, ease: big ? "outBack(2.2)" : "outElastic(1, .55)" },
-    ],
+    scale: 1,
+    duration: 720,
+    ease: big ? "outBack(2.4)" : "outElastic(1, .5)",
   });
   const pulseEl = marker.getElement().querySelector(".marker-pulse");
   if (pulseEl) {
+    pulseEl.style.transform = "scale(0.5)";
+    pulseEl.style.opacity = "0.75";
     anime.animate(pulseEl, {
-      scale: [{ from: 0.4, to: 3 }],
-      opacity: [{ from: 0.7, to: 0 }],
-      duration: 1100, ease: "outCubic", loop: 2,
+      scale: 3,
+      opacity: 0,
+      duration: 1100,
+      ease: "outCubic",
+      loop: 2,
     });
   }
 }
@@ -453,11 +467,13 @@ function spawnRipple(lngLat, color = "#4d7df0", maxScale = 3.6, duration = 1300,
     ring.className = "ripple-ring";
     ring.style.borderColor = color;
     ring.style.boxShadow = `0 0 18px ${color}88`;
+    ring.style.transform = "scale(0.2)";
+    ring.style.opacity = "0.95";
     wrap.appendChild(ring);
     const m = new maplibregl.Marker({ element: wrap }).setLngLat(lngLat).addTo(map);
     anime.animate(ring, {
-      scale: [{ from: 0.2, to: maxScale }],
-      opacity: [{ from: 0.95, to: 0 }],
+      scale: maxScale,
+      opacity: 0,
       duration,
       delay: i * 200,
       ease: "outCubic",
