@@ -116,6 +116,7 @@ async function init() {
   document.getElementById("btn-lb-close").onclick = closeModal;
   document.getElementById("btn-share").onclick = onShare;
   document.getElementById("btn-name-save").onclick = onSaveName;
+  document.getElementById("btn-fresh-guest").onclick = onFreshGuest;
 
   // toolbar
   document.getElementById("btn-help").onclick = () => openHowto(0, true);
@@ -224,13 +225,24 @@ async function onSignIn() {
 
 async function onSignOut() {
   if (!sb) return;
-  await sb.auth.signOut();
-  // Reset to a fresh guest identity. The signed-in player's score row stays
-  // in the DB (one-shot per auth account), but the browser starts clean so
-  // the user can see the main menu — and play today as a guest if they want.
+  try { await sb.auth.signOut(); } catch {}
+  resetToGuest();
+}
+
+function resetToGuest() {
   localStorage.removeItem("israelle_player_id");
   localStorage.removeItem("israelle_player_name");
   location.reload();
+}
+
+function onFreshGuest() {
+  if (!confirm("יישחק לך פאזל חדש כאורח. ההיסטוריה המקומית תאופס. להמשיך?")) return;
+  // If signed in too, sign out first so we don't immediately re-resume the account
+  if (sb && session) {
+    sb.auth.signOut().finally(resetToGuest);
+  } else {
+    resetToGuest();
+  }
 }
 
 // ─── Israel mask + border ───────────────────────────────────────────────────
