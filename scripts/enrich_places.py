@@ -9,11 +9,41 @@ Wikidata. Retry-with-backoff on 429s.
 """
 import csv
 import json
+import math
 import time
 import urllib.parse
 from pathlib import Path
 
 import httpx
+
+
+def esri_tile_url(lat: float, lon: float, z: int = 14) -> str:
+    """A single Esri World Imagery satellite tile centered (roughly) on lat/lon.
+    Same source we use as basemap — fine as a no-Wikipedia image fallback."""
+    n = 2 ** z
+    x = int((lon + 180.0) / 360.0 * n)
+    lat_rad = math.radians(lat)
+    y = int((1.0 - math.log(math.tan(lat_rad) + 1.0 / math.cos(lat_rad)) / math.pi) / 2.0 * n)
+    return f"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+
+
+def google_maps_search(name_he: str, lat: float, lon: float) -> str:
+    """Fallback 'read more' link when Wikipedia has nothing — opens Google
+    Maps centered on the place, named in Hebrew with the country pinned."""
+    q = urllib.parse.quote(f"{name_he}, ישראל" if name_he else f"{lat},{lon}")
+    return f"https://www.google.com/maps/search/?api=1&query={q}"
+
+
+def wiki_url_from_titles(titles: dict) -> str:
+    if not titles:
+        return ""
+    he = titles.get("he")
+    if he:
+        return f"https://he.wikipedia.org/wiki/{urllib.parse.quote(he.replace(' ', '_'))}"
+    en = titles.get("en")
+    if en:
+        return f"https://en.wikipedia.org/wiki/{urllib.parse.quote(en.replace(' ', '_'))}"
+    return ""
 
 ROOT = Path(__file__).parent.parent
 CSV_PATH = ROOT / "data" / "places.csv"
@@ -248,10 +278,13 @@ def main():
 
     # Apply: prefer name-cache (Hebrew via he.wiki) for description; fall back
     # to qid-cache (which may be English). For image, take whichever has one.
-    n_desc = n_img = 0
+    # source_url: prefer he.wiki, then en.wiki, then Google Maps search.
+    # image_url fallback: a satellite tile from Esri so every place has a visual.
+    n_desc = n_img = n_src = n_wiki = 0
     for row in rows:
         row["description"] = ""
         row["image_url"] = ""
+        row["source_url"] = ""
         qid = row.get("wikidata", "")
         nh = row.get("name_he", "").strip()
         name_c = by_name_cache.get(nh, {})
@@ -263,20 +296,35 @@ def main():
             row["description"] = qid_c["extract"]
         else:
             row["description"] = name_c.get("extract") or qid_c.get("extract", "")
-        # Image: either source
-        row["image_url"] = name_c.get("thumb") or qid_c.get("thumb", "")
+        # Image: wiki thumbnail > satellite tile (every place gets *something*)
+        row["image_url"] = (
+            name_c.get("thumb")
+            or qid_c.get("thumb", "")
+            or esri_tile_url(float(row["lat"]), float(row["lon"]))
+        )
+        # Source link: name_he wiki > qid wiki > Google Maps search
+        wiki = ""
+        if name_c.get("extract"):
+            wiki = f"https://he.wikipedia.org/wiki/{urllib.parse.quote(nh.replace(' ', '_'))}"
+        elif qid:
+            wiki = wiki_url_from_titles(titles_cache.get(qid, {}))
+        row["source_url"] = wiki or google_maps_search(nh, float(row["lat"]), float(row["lon"]))
+        if wiki:
+            n_wiki += 1
         if row["description"]:
             n_desc += 1
         if row["image_url"]:
             n_img += 1
+        if row["source_url"]:
+            n_src += 1
 
     fieldnames = ["id", "name_en", "name_he", "type", "lat", "lon",
-                  "importance", "wikidata", "description", "image_url"]
+                  "importance", "wikidata", "description", "image_url", "source_url"]
     with CSV_PATH.open("w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()
         w.writerows(rows)
-    print(f"DONE: {n_desc} with description, {n_img} with image")
+    print(f"DONE: {n_desc} with description, {n_img} with image ({n_wiki} wiki + {n_img - n_wiki} satellite fallback), {n_src} with source url")
 
 
 if __name__ == "__main__":

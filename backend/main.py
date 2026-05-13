@@ -129,6 +129,7 @@ def me_today(request: Request, hint: str | None = None):
             gs["polygon"] = places.get_polygon(int(gs["place_id"]))
             gs["description"] = p.get("description", "")
             gs["image_url"] = p.get("image_url", "")
+            gs["source_url"] = p.get("source_url", "")
     owner = next((pl for pl in players if pl["id"] == g["player_id"]), players[0])
     return {
         "player_id": g["player_id"],
@@ -170,6 +171,7 @@ def today_me(player_id: str):
             gs["polygon"] = places.get_polygon(int(gs["place_id"]))
             gs["description"] = p.get("description", "")
             gs["image_url"] = p.get("image_url", "")
+            gs["source_url"] = p.get("source_url", "")
     return {
         "game_id": g["id"],
         "total_score": g["total_score"],
@@ -278,6 +280,7 @@ def today_guess(body: GuessIn, request: Request):
         "game_id": game_id,
         "description": p.get("description", ""),
         "image_url": p.get("image_url", ""),
+        "source_url": p.get("source_url", ""),
     }
 
 

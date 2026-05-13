@@ -218,10 +218,20 @@ button:active { transform: translateY(0); }
 #reveal-place { font-size: 17px; margin: 8px 0 4px; font-weight: 700; color: var(--il-blue-light); }
 #reveal-desc {
   font-size: 12px; line-height: 1.45; opacity: 0.7;
-  margin: 4px 0 8px; max-height: 4.5em; overflow: hidden;
+  margin: 4px 0 6px; max-height: 4.5em; overflow: hidden;
   border-inline-start: 2px solid rgba(77, 125, 240, 0.35);
   padding-inline-start: 8px;
 }
+.reveal-source {
+  display: inline-block; font-size: 11px; color: var(--il-blue-light);
+  text-decoration: none; margin: 0 0 8px;
+  padding: 2px 8px; border-radius: 6px;
+  border: 1px solid rgba(77, 125, 240, 0.3);
+  transition: background 0.15s, border-color 0.15s;
+}
+.reveal-source:hover { background: rgba(77, 125, 240, 0.12); border-color: rgba(77, 125, 240, 0.6); }
+a.place-name { text-decoration: none; }
+a.place-name:hover { text-decoration: underline; }
 #reveal-dist { opacity: 0.7; font-size: 13px; display: flex; align-items: center; gap: 8px; }
 #reveal-dist::before {
   content: ""; width: 16px; height: 2px;

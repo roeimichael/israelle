@@ -25,6 +25,7 @@ def _load() -> dict[int, dict]:
                 "importance": float(row["importance"]),
                 "description": row.get("description", ""),
                 "image_url": row.get("image_url", ""),
+                "source_url": row.get("source_url", ""),
             }
     return out
 

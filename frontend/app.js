@@ -609,6 +609,13 @@ function showReveal(res) {
   const descEl = document.getElementById("reveal-desc");
   descEl.textContent = res.description || "";
   descEl.classList.toggle("hidden", !res.description);
+  const srcEl = document.getElementById("reveal-source");
+  if (res.source_url) {
+    srcEl.href = res.source_url;
+    srcEl.classList.remove("hidden");
+  } else {
+    srcEl.classList.add("hidden");
+  }
   document.getElementById("reveal-dist").textContent = `${res.distance_km} ק״מ ממך`;
   document.getElementById("btn-next").textContent = res.is_last ? "סיכום" : "הבא ←";
   clearPolygon();
@@ -652,11 +659,14 @@ function renderPlacesList() {
     const desc = g.description
       ? `<div class="place-desc">${escapeHtml(g.description)}</div>`
       : "";
+    const name = g.source_url
+      ? `<a class="place-name" href="${escapeHtml(g.source_url)}" target="_blank" rel="noopener">${escapeHtml(g.name_he || "")} ↗</a>`
+      : `<div class="place-name">${escapeHtml(g.name_he || "")}</div>`;
     return `
       <div class="place-tile">
         <div class="place-img">${img}</div>
         <div class="place-info">
-          <div class="place-name">${escapeHtml(g.name_he || "")}</div>
+          ${name}
           ${desc}
         </div>
       </div>`;
