@@ -32,7 +32,7 @@ INTER_SUMMARY_SLEEP = 0.15  # base delay between summary fetches (unused with ba
 
 HE_API = "https://he.wikipedia.org/w/api.php"
 EN_API = "https://en.wikipedia.org/w/api.php"
-TITLES_BATCH = 40           # MediaWiki API allows 50, leave headroom
+TITLES_BATCH = 20           # MediaWiki extracts API silently drops past 20 per request
 
 
 def _load_cache(path: Path) -> dict:
@@ -192,17 +192,79 @@ def main():
             time.sleep(0.4)
         _save_cache(SUMMARIES_CACHE, summaries_cache)
 
-    # Apply cached summaries to rows
+    # 3) Direct-by-name fallback on Hebrew Wikipedia.
+    # Runs even when qid path produced *something* — the qid path sometimes
+    # caches English content (when wikidata only knew the enwiki sitelink), and
+    # the user wants Hebrew. We re-query by name_he so the description is
+    # actually in Hebrew when a Hebrew article exists.
+    by_name_cache: dict = _load_cache(CACHE_DIR / "wp_by_name_cache.json")
+
+    def _is_hebrew(s: str) -> bool:
+        return any("֐" <= c <= "׿" for c in (s or "")[:30])
+
+    def needs_more(qid: str, name_he: str) -> bool:
+        # Skip only when both name-cache description is already Hebrew + we have an image.
+        nc = by_name_cache.get(name_he, {})
+        if _is_hebrew(nc.get("extract", "")) and nc.get("thumb"):
+            return False
+        return True
+
+    missing_names = []
+    seen_names: set[str] = set()
+    for r in rows:
+        nh = r.get("name_he", "").strip()
+        if not nh or nh in seen_names:
+            continue
+        seen_names.add(nh)
+        qid = r.get("wikidata", "")
+        if needs_more(qid, nh):
+            missing_names.append(nh)
+    print(f"name-based fallback: {len(missing_names)} titles to try")
+    for i in range(0, len(missing_names), TITLES_BATCH):
+        batch = missing_names[i:i + TITLES_BATCH]
+        got = get_summaries_batch("he", batch)
+        for title, data in got.items():
+            # title from API after redirect — also store under the original we queried
+            for orig in batch:
+                if orig == title or orig.replace(" ", "_") == title.replace(" ", "_"):
+                    cur = by_name_cache.get(orig, {"extract": "", "thumb": ""})
+                    if not cur.get("extract") and data["extract"]:
+                        cur["extract"] = data["extract"][:280]
+                    if not cur.get("thumb") and data["thumb"]:
+                        cur["thumb"] = data["thumb"]
+                    by_name_cache[orig] = cur
+                    break
+            else:
+                # API-resolved title that didn't match a literal request title (redirect target)
+                by_name_cache[title] = {
+                    "extract": (data.get("extract") or "")[:280],
+                    "thumb": data.get("thumb", ""),
+                }
+        if (i // TITLES_BATCH) % 5 == 0:
+            _save_cache(CACHE_DIR / "wp_by_name_cache.json", by_name_cache)
+        print(f"    name {min(i + TITLES_BATCH, len(missing_names))}/{len(missing_names)}")
+        time.sleep(0.4)
+    _save_cache(CACHE_DIR / "wp_by_name_cache.json", by_name_cache)
+
+    # Apply: prefer name-cache (Hebrew via he.wiki) for description; fall back
+    # to qid-cache (which may be English). For image, take whichever has one.
     n_desc = n_img = 0
     for row in rows:
         row["description"] = ""
         row["image_url"] = ""
         qid = row.get("wikidata", "")
-        if not qid:
-            continue
-        cur = summaries_cache.get(qid, {})
-        row["description"] = cur.get("extract", "")
-        row["image_url"] = cur.get("thumb", "")
+        nh = row.get("name_he", "").strip()
+        name_c = by_name_cache.get(nh, {})
+        qid_c = summaries_cache.get(qid, {}) if qid else {}
+        # Description: prefer Hebrew name-cache extract
+        if _is_hebrew(name_c.get("extract", "")):
+            row["description"] = name_c["extract"]
+        elif _is_hebrew(qid_c.get("extract", "")):
+            row["description"] = qid_c["extract"]
+        else:
+            row["description"] = name_c.get("extract") or qid_c.get("extract", "")
+        # Image: either source
+        row["image_url"] = name_c.get("thumb") or qid_c.get("thumb", "")
         if row["description"]:
             n_desc += 1
         if row["image_url"]:
