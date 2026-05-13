@@ -158,11 +158,38 @@ button:active { transform: translateY(0); }
 .game-total-hint { font-size: 12px; opacity: 0.55; margin-top: 12px; letter-spacing: 0.3px; }
 .game-total-hint b { color: var(--il-blue-light); }
 
-/* ─── Reveal + end cards ─── */
-#reveal-card { min-width: 340px; }
-#reveal-breakdown { font-size: 14px; opacity: 0.55; margin: -4px 0 8px; letter-spacing: 0.4px; }
-#reveal-place { font-size: 18px; margin: 8px 0; font-weight: 600; }
-#reveal-dist { opacity: 0.65; font-size: 14px; }
+/* ─── Reveal card: bottom-corner stats overlay (maptap-style) ─── */
+#overlay:has(#reveal-card:not(.hidden)) {
+  align-items: flex-end; justify-content: flex-start;
+  padding: 0 0 24px 24px;
+}
+#reveal-card {
+  min-width: 260px; max-width: 320px;
+  padding: 18px 22px; text-align: start;
+  border-radius: 16px;
+}
+#reveal-card h2 {
+  font-size: 36px; margin: 0 0 2px;
+  text-align: start;
+}
+#reveal-breakdown { font-size: 13px; opacity: 0.55; margin: 0 0 8px; letter-spacing: 0.3px; }
+#reveal-place { font-size: 17px; margin: 8px 0 4px; font-weight: 700; color: var(--il-blue-light); }
+#reveal-dist { opacity: 0.7; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+#reveal-dist::before {
+  content: ""; width: 16px; height: 2px;
+  background: linear-gradient(90deg, var(--guess), var(--truth));
+  border-radius: 2px;
+}
+#reveal-card #btn-next {
+  width: 100%; margin-top: 14px; padding: 10px 20px; font-size: 14px;
+}
+@media (max-width: 520px) {
+  #overlay:has(#reveal-card:not(.hidden)) {
+    align-items: stretch; justify-content: stretch;
+    padding: 0 12px 12px 12px;
+  }
+  #reveal-card { min-width: 0; max-width: none; width: 100%; }
+}
 #final-score {
   font-size: 80px; font-weight: 800; margin: 12px 0; letter-spacing: -3px;
   background: linear-gradient(135deg, var(--il-blue-light) 0%, var(--il-white) 100%);

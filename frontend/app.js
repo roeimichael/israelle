@@ -548,16 +548,47 @@ function emojiStrip(played) {
     .join("");
 }
 
+function scoreEmoji(pct) {
+  if (pct >= 0.95) return "🎯";
+  if (pct >= 0.80) return "🔥";
+  if (pct >= 0.60) return "🏅";
+  if (pct >= 0.30) return "👍";
+  return "💩";
+}
+
+function buildShareText() {
+  const games = state.played.slice().sort((a, b) => a.round_idx - b.round_idx);
+  const line = games
+    .map((g) => {
+      const max = 100 * (g.multiplier || state.rounds[g.round_idx]?.multiplier || 1);
+      return `${g.round_score}${scoreEmoji(g.round_score / max)}`;
+    })
+    .join(" ");
+  return (
+    `IsraelE #${state.dayNumber}\n` +
+    `${line}\n` +
+    `ניקוד סופי: ${state.totalScore}/1000\n` +
+    `${location.origin}`
+  );
+}
+
 async function onShare() {
-  const txt =
-    `IsraelE #${state.dayNumber} — ${state.totalScore}/1000\n` +
-    `${emojiStrip(state.played)}\n` +
-    `${location.origin}`;
+  const txt = buildShareText();
   try {
+    if (navigator.share) {
+      await navigator.share({ title: `IsraelE #${state.dayNumber}`, text: txt });
+      return;
+    }
     await navigator.clipboard.writeText(txt);
     flashToast("הועתק ללוח", "ok");
-  } catch {
-    flashToast("העתקה נכשלה");
+  } catch (e) {
+    if (e?.name === "AbortError") return; // user cancelled native share
+    try {
+      await navigator.clipboard.writeText(txt);
+      flashToast("הועתק ללוח", "ok");
+    } catch {
+      flashToast("העתקה נכשלה");
+    }
   }
 }
 
