@@ -69,16 +69,35 @@ def today():
 
 
 @app.get("/api/me/today")
-def me_today(request: Request):
+def me_today(request: Request, hint: str | None = None):
     """Canonical 'have I played today?' lookup by Google identity.
     Cross-references all player rows linked to auth_user_id, returning the
-    one with today's game (if any) so the client can rebind localStorage."""
+    one with today's game (if any) so the client can rebind localStorage.
+
+    `hint` is the caller's current localStorage player_id. When this auth
+    account has no claimed player row yet AND the hint points to an
+    unclaimed player row, we claim it — so a guest who played before
+    signing in still gets their game attached to their account.
+    """
     jwt = _jwt(request)
     auth_user_id = supa.verify_jwt(jwt) if jwt else None
     if not auth_user_id:
         raise HTTPException(401, "sign in required")
     d = _il_today_iso()
     players = supa.select("players", select="id,name", auth_user_id=f"eq.{auth_user_id}")
+    if not players and hint:
+        # No claimed player yet. Try to claim the guest row the client is on.
+        # RLS players_update.USING accepts rows whose auth_user_id IS NULL.
+        try:
+            supa.update(
+                "players",
+                {"id": f"eq.{hint}", "auth_user_id": "is.null"},
+                {"auth_user_id": auth_user_id},
+                jwt=jwt,
+            )
+            players = supa.select("players", select="id,name", auth_user_id=f"eq.{auth_user_id}")
+        except httpx.HTTPStatusError:
+            pass
     if not players:
         return {"player_id": None, "name": None, "done": False, "guesses": [], "total_score": 0}
     ids = ",".join(p["id"] for p in players)

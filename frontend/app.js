@@ -187,7 +187,11 @@ async function loadTodayIntoState() {
     let me = null;
     if (session?.access_token) {
       try {
-        const authMe = await fetchJSON("/api/me/today", {
+        // Pass the current localStorage id as a hint so the backend can
+        // claim a guest player row this account hasn't seen yet (e.g. user
+        // played as guest, then signed in for the first time today).
+        const url = `/api/me/today?hint=${encodeURIComponent(playerId)}`;
+        const authMe = await fetchJSON(url, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
         if (authMe.player_id && authMe.player_id !== playerId) {
