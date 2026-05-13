@@ -83,10 +83,24 @@ async function init() {
   map = new maplibregl.Map({
     container: "map", style: SAT_STYLE, center: ISRAEL_CENTER,
     zoom: 7.3, minZoom: 6, maxZoom: 18,
-    maxBounds: PAN_BOUNDS, dragRotate: false, pitchWithRotate: false,
+    maxBounds: PAN_BOUNDS,
+    dragRotate: false, pitchWithRotate: false, touchPitch: false,
+    clickTolerance: 6,             // generous tap-vs-drag threshold
+    fadeDuration: 80,              // faster style transitions
   });
+  map.touchZoomRotate?.disableRotation();
   map.on("click", onMapClick);
   map.on("load", addIsraelMask);
+  // Fast tap feedback: drop a transient ripple at touch-start so the user
+  // sees something the instant they tap, while the real click event resolves.
+  const onPress = (e) => {
+    if (!state.awaitingClick) return;
+    const ll = e.lngLat;
+    if (!ll) return;
+    spawnRipple([ll.lng, ll.lat], "#ffffff", 1.8, 380, 1);
+  };
+  map.on("mousedown", onPress);
+  map.on("touchstart", onPress);
 
   // wire buttons
   document.getElementById("btn-start").onclick = onStart;

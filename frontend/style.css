@@ -420,16 +420,32 @@ button:active { transform: translateY(0); }
   .card h1 { font-size: 30px; }
   .card h2 { font-size: 30px; }
   #final-score { font-size: 60px; }
-  #hud { padding: 10px 14px; top: 8px; }
+  #hud {
+    padding: 10px 14px; top: 8px;
+    left: 8px; right: 8px; transform: none;
+    max-width: none; width: auto;
+  }
   #prompt { font-size: 17px; }
-  #round-info { gap: 10px; font-size: 11px; }
+  #round-info { gap: 10px; font-size: 11px; flex-wrap: wrap; }
   .stat-row { grid-template-columns: repeat(2, 1fr); }
   #topbar { top: 8px; left: 8px; right: 8px; gap: 8px; }
-  .tb-btn { padding: 5px 8px; min-width: 30px; font-size: 13px; }
-  #user-chip { padding: 4px 10px; font-size: 12px; }
-  #emoji-strip { font-size: 22px; letter-spacing: 3px; }
+  /* Hit targets ≥ 44px per WCAG/HIG; touch-action stops the browser from
+     hijacking taps with double-tap-zoom or scroll panning */
+  .tb-btn {
+    padding: 10px 12px; min-width: 44px; min-height: 44px;
+    font-size: 17px; touch-action: manipulation;
+  }
+  #user-chip { padding: 6px 12px; font-size: 13px; gap: 8px; }
+  #user-chip button { padding: 6px; min-width: 34px; }
+  #emoji-strip { font-size: 22px; letter-spacing: 2px; word-spacing: 4px; }
   #end-actions { flex-direction: column; }
   #end-actions button { width: 100%; }
+  button { touch-action: manipulation; }
+  /* Reveal corner card stretched at the bottom, no min-width clamp */
+  #reveal-card h2 { font-size: 28px; }
+  #reveal-card #btn-next { padding: 12px; font-size: 15px; }
 }
 
+/* MapLibre canvas should accept fast pinch/pan but not browser zoom delay */
+.maplibregl-map, .maplibregl-canvas { touch-action: pan-x pan-y pinch-zoom; }
 .maplibregl-ctrl-attrib { font-size: 10px; opacity: 0.55; }
