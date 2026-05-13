@@ -60,9 +60,21 @@
     </div>
     <p>פאזל יומי. כל יום 6 מקומות חדשים. כולם משחקים את אותו הסט.</p>
     <div class="mult-legend">
-      <div><span class="m1">×1</span> 2 ערים · עד 100 כ״א</div>
-      <div><span class="m2">×1.5</span> 2 יישובים · עד 150 כ״א</div>
-      <div><span class="m3">×2.5</span> 2 אתרים · עד 250 כ״א</div>
+      <div class="mult-row m1">
+        <i data-lucide="building-2" class="mult-ico"></i>
+        <span class="mult-text">2 ערים · עד 100 כ״א</span>
+        <span class="mult-bubble">×1</span>
+      </div>
+      <div class="mult-row m2">
+        <i data-lucide="house" class="mult-ico"></i>
+        <span class="mult-text">2 יישובים · עד 150 כ״א</span>
+        <span class="mult-bubble">×1.5</span>
+      </div>
+      <div class="mult-row m3">
+        <i data-lucide="mountain" class="mult-ico"></i>
+        <span class="mult-text">2 אתרים · עד 250 כ״א</span>
+        <span class="mult-bubble">×2.5</span>
+      </div>
     </div>
     <div class="game-total-hint">כל משחק עד <b>1000</b> נקודות</div>
 
@@ -179,6 +191,7 @@
 <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/animejs@4/dist/bundles/anime.umd.min.js"></script>
+<script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

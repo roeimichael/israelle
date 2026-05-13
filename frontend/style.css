@@ -56,20 +56,32 @@ body { background: var(--bg); }
 
 .card {
   position: relative;
-  background: var(--bg-card);
-  padding: 32px 36px; border-radius: 16px;
+  background: linear-gradient(155deg, rgba(28, 36, 56, 0.78) 0%, rgba(14, 18, 28, 0.85) 100%);
+  backdrop-filter: blur(22px) saturate(1.4);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  padding: 34px 38px; border-radius: 22px;
   text-align: center; min-width: 320px; max-width: 460px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6),
-              0 0 0 1px rgba(77, 125, 240, 0.15);
+  box-shadow:
+    0 24px 70px -10px rgba(0, 0, 0, 0.7),
+    0 10px 32px -8px rgba(0, 56, 184, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
   overflow: hidden;
 }
-/* Israeli flag stripe accent on cards */
-.card::before, .card::after {
-  content: ""; position: absolute; left: 0; right: 0; height: 3px;
-  background: var(--il-blue);
+/* gradient border via mask */
+.card::before {
+  content: ""; position: absolute; inset: 0;
+  border-radius: inherit; padding: 1px;
+  background: linear-gradient(135deg, rgba(77, 125, 240, 0.65), rgba(255, 255, 255, 0.05) 40%, rgba(77, 125, 240, 0.35) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  pointer-events: none;
 }
-.card::before { top: 0; }
-.card::after { bottom: 0; }
+/* soft top-light flag accent */
+.card::after {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, transparent, var(--il-blue) 50%, transparent);
+  opacity: 0.7;
+}
 
 .card h1 {
   margin: 0; font-size: 40px; letter-spacing: -1.5px;
@@ -86,6 +98,7 @@ body { background: var(--bg); }
   border: 1px solid rgba(77, 125, 240, 0.4);
   -webkit-text-fill-color: var(--il-blue-light);
 }
+.title-row .day-tag:empty { display: none; }
 .card h2 { margin: 0 0 12px; font-size: 42px; color: var(--il-blue-light); font-weight: 700; }
 .card p { opacity: 0.75; line-height: 1.5; }
 
@@ -100,17 +113,47 @@ button:active { transform: translateY(0); }
 
 /* ─── Multiplier legend ─── */
 .mult-legend {
-  display: flex; flex-direction: column; gap: 8px; margin: 20px 0 4px;
-  font-size: 14px; text-align: left; opacity: 0.92;
+  display: flex; flex-direction: column; gap: 10px; margin: 22px 0 4px;
+  font-size: 14px; text-align: start;
 }
-.mult-legend > div { display: flex; align-items: center; gap: 12px; }
-.mult-legend .m1, .mult-legend .m2, .mult-legend .m3 {
+.mult-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 10px 14px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: transform 0.2s, background 0.2s, border-color 0.2s;
+}
+.mult-row:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(77, 125, 240, 0.35);
+}
+.mult-ico {
+  width: 22px; height: 22px; flex-shrink: 0;
+  color: var(--il-blue-light); opacity: 0.92;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.mult-ico svg { width: 100%; height: 100%; stroke-width: 2; }
+.mult-text { flex: 1; font-weight: 500; opacity: 0.9; }
+.mult-bubble {
+  font-weight: 800; font-size: 13px; letter-spacing: 0.3px;
+  padding: 4px 12px; border-radius: 999px; min-width: 44px; text-align: center;
+  box-shadow: 0 4px 12px -4px currentColor;
+}
+.mult-row.m1 .mult-bubble { background: rgba(160, 174, 192, 0.18); color: #cbd5e0; border: 1px solid rgba(160, 174, 192, 0.35); box-shadow: none; }
+.mult-row.m2 .mult-bubble { background: rgba(237, 175, 65, 0.18); color: #fbcd6a; border: 1px solid rgba(237, 175, 65, 0.5); }
+.mult-row.m3 .mult-bubble { background: rgba(229, 62, 62, 0.2);  color: #ff8585; border: 1px solid rgba(229, 62, 62, 0.55); }
+.mult-row.m1 .mult-ico { color: #cbd5e0; }
+.mult-row.m2 .mult-ico { color: #fbcd6a; }
+.mult-row.m3 .mult-ico { color: #ff8585; }
+/* small-variant for howto card keeps old inline classes */
+.mult-legend.small .m1, .mult-legend.small .m2, .mult-legend.small .m3 {
   display: inline-block; min-width: 36px; padding: 3px 10px; border-radius: 6px;
   font-weight: 700; text-align: center; font-size: 13px;
 }
-.m1 { background: rgba(74, 85, 104, 0.7); color: var(--il-white); }
-.m2 { background: rgba(214, 158, 46, 0.85); color: #1a1f26; }
-.m3 { background: rgba(229, 62, 62, 0.85); color: var(--il-white); }
+.mult-legend.small .m1 { background: rgba(74, 85, 104, 0.7); color: var(--il-white); }
+.mult-legend.small .m2 { background: rgba(214, 158, 46, 0.85); color: #1a1f26; }
+.mult-legend.small .m3 { background: rgba(229, 62, 62, 0.85); color: var(--il-white); }
 .mult { padding: 2px 9px; border-radius: 5px; font-size: 11px; font-weight: 700; letter-spacing: 0.3px; }
 .game-total-hint { font-size: 12px; opacity: 0.55; margin-top: 12px; letter-spacing: 0.3px; }
 .game-total-hint b { color: var(--il-blue-light); }

@@ -111,10 +111,28 @@ async function init() {
   startCountdown();
   await fetchDayNumber();
 
+  // render Lucide icons
+  if (window.lucide?.createIcons) window.lucide.createIcons();
+
   // first-visit howto
   if (!localStorage.getItem("israelle_seen_howto")) {
     openHowto(0);
+  } else {
+    animateCardIn("start-card");
   }
+}
+
+function animateCardIn(cardId) {
+  if (!window.anime) return;
+  const card = document.getElementById(cardId);
+  if (!card || card.classList.contains("hidden")) return;
+  anime.animate(card, {
+    opacity: [{ from: 0, to: 1 }],
+    translateY: [{ from: 18, to: 0 }],
+    scale: [{ from: 0.96, to: 1 }],
+    duration: 520,
+    ease: "outCubic",
+  });
 }
 
 async function fetchDayNumber() {
@@ -560,6 +578,7 @@ function showCard(cardId, passThrough = false) {
     document.getElementById(cardId).classList.remove("hidden");
     overlay.classList.toggle("pass-through", passThrough);
     overlay.classList.remove("hidden");
+    animateCardIn(cardId);
   } else {
     overlay.classList.add("hidden");
   }
