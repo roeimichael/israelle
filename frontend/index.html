@@ -18,7 +18,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <link rel="apple-touch-icon" href="/docs/flag.png" />
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-<link href="/static/style.css?v=12" rel="stylesheet" />
+<link href="/static/style.css?v=13" rel="stylesheet" />
 </head>
 <body>
 <!-- splash: covers everything until init resolves -->
@@ -74,25 +74,25 @@
       <h1>IsraelE</h1>
       <span id="day-num-start" class="day-tag"></span>
     </div>
-    <p>פאזל יומי. כל יום 6 מקומות חדשים. כולם משחקים את אותו הסט.</p>
+    <p class="tagline">כמה טוב אתם מכירים את ישראל?<br/>6 מקומות חדשים בכל יום, אותו סט לכולם.</p>
     <div class="mult-legend">
       <div class="mult-row m1">
         <i data-lucide="building-2" class="mult-ico"></i>
-        <span class="mult-text">2 ערים · עד 100 כ״א</span>
+        <span class="mult-text">2 ערים</span>
         <span class="mult-bubble">×1</span>
       </div>
       <div class="mult-row m2">
         <i data-lucide="house" class="mult-ico"></i>
-        <span class="mult-text">2 יישובים · עד 150 כ״א</span>
+        <span class="mult-text">2 יישובים</span>
         <span class="mult-bubble">×1.5</span>
       </div>
       <div class="mult-row m3">
         <i data-lucide="mountain" class="mult-ico"></i>
-        <span class="mult-text">2 אתרים · עד 250 כ״א</span>
+        <span class="mult-text">2 אתרים</span>
         <span class="mult-bubble">×2.5</span>
       </div>
     </div>
-    <div class="game-total-hint">כל משחק עד <b>1000</b> נקודות</div>
+    <div class="game-total-hint">עד <b>1000</b> נקודות</div>
 
     <div id="signin-area">
       <button id="btn-signin" class="btn-google">
@@ -104,10 +104,11 @@
         </svg>
         <span>התחברות עם Google</span>
       </button>
-      <p class="signin-hint">או שחקו כאורח — ההיסטוריה תישמר בדפדפן הזה בלבד.</p>
+      <div class="auth-divider"><span>או</span></div>
     </div>
 
-    <button id="btn-start">התחל</button>
+    <button id="btn-start" class="btn-secondary">התחל כאורח</button>
+    <p class="signin-hint">משחק כאורח לא ישמור היסטוריה ארוכת-טווח.</p>
     <div id="next-puzzle-in" class="countdown hidden">פאזל הבא בעוד <span id="cd"></span></div>
   </div>
 
@@ -214,6 +215,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/animejs@4/dist/bundles/anime.umd.min.js"></script>
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
-<script src="/static/app.js?v=15"></script>
+<script src="/static/app.js?v=16"></script>
 </body>
 </html>

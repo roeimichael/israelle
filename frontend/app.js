@@ -205,16 +205,28 @@ function renderUserChip() {
   const chip = document.getElementById("user-chip");
   const signinArea = document.getElementById("signin-area");
   const statsBtn = document.getElementById("btn-stats");
+  const startBtn = document.getElementById("btn-start");
+  const guestHint = document.querySelector("#start-card .signin-hint");
   if (session) {
     chip.classList.remove("hidden");
     document.getElementById("user-name").textContent =
       session.user.user_metadata?.full_name || session.user.email || "";
     signinArea?.classList.add("hidden");
     statsBtn?.classList.remove("hidden");
+    if (startBtn) {
+      startBtn.textContent = "התחל";
+      startBtn.classList.remove("btn-secondary");
+    }
+    guestHint?.classList.add("hidden");
   } else {
     chip.classList.add("hidden");
     signinArea?.classList.remove("hidden");
-    statsBtn?.classList.add("hidden");   // stats gated to signed-in users
+    statsBtn?.classList.add("hidden");
+    if (startBtn) {
+      startBtn.textContent = "התחל כאורח";
+      startBtn.classList.add("btn-secondary");
+    }
+    guestHint?.classList.remove("hidden");
   }
 }
 
