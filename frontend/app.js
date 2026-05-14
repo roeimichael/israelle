@@ -706,7 +706,6 @@ function showReveal(res) {
   }
   document.getElementById("reveal-dist").textContent = `${res.distance_km} ק״מ ממך`;
   document.getElementById("btn-next").textContent = res.is_last ? "סיכום" : "הבא ←";
-  clearPolygon();
   showCard("reveal-card", true);
   state._lastWasFinal = res.is_last;
 }
