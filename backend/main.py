@@ -427,7 +427,12 @@ app.mount("/docs", StaticFiles(directory=str(DOCS)), name="docs")
 @app.middleware("http")
 async def no_cache_static(request: Request, call_next):
     response = await call_next(request)
-    if request.url.path.startswith(("/static/", "/")) and not request.url.path.startswith("/api/"):
+    path = request.url.path
+    if path.startswith("/api/"):
+        # /api/today carries tile_hash. We never want a stale copy from
+        # the browser cache — that's what made fast-path skip earlier.
+        response.headers["Cache-Control"] = "no-store"
+    elif path.startswith("/static/") or path == "/":
         response.headers["Cache-Control"] = "no-cache, must-revalidate"
     return response
 

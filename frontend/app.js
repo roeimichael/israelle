@@ -183,8 +183,15 @@ async function loadTodayIntoState() {
     // Hydrate the per-round paint index — used to draw the reveal line
     // without waiting for the score round-trip.
     if (t.tile_hash) {
-      try { state._idx = await _initPaintIndex(t.tile_hash, t.date); }
-      catch (_) { state._idx = null; }
+      try {
+        state._idx = await _initPaintIndex(t.tile_hash, t.date);
+        console.log("[ils] paint index ready, rounds=", state._idx?.length);
+      } catch (e) {
+        state._idx = null;
+        console.warn("[ils] paint index failed:", e);
+      }
+    } else {
+      console.warn("[ils] /api/today missing tile_hash");
     }
     const tag = document.getElementById("day-num-start");
     if (tag) tag.textContent = `#${t.day_number}`;
@@ -438,6 +445,7 @@ async function onMapClick(e) {
   }).then((r) => r.json()).catch((err) => ({ _err: err }));
 
   const localTruth = state._idx?.[state.cursor];   // [lat, lon] or undefined
+  console.log("[ils] click", { round: state.cursor, fast: !!localTruth, t: Math.round(performance.now()) });
   if (localTruth) {
     const truthLngLat = [localTruth[1], localTruth[0]];
     // Simple bbox from guess+truth so the camera frames both immediately;
