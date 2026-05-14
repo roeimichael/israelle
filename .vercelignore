@@ -1,5 +1,4 @@
 backend/
-scripts/
 data/
 .venv/
 __pycache__/
