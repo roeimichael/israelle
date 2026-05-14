@@ -1,11 +1,10 @@
-"""Fetch a clean Israel-including-Palestinian-territories LAND polygon.
+"""Fetch a high-detail land-only polygon for Israel + Palestinian territories.
 
-Source: Natural Earth 1:10m cultural countries (nvkelso/natural-earth-vector).
-This dataset is curated land-only — no EEZ/territorial-water bulges into the
-Mediterranean — so it can be used directly as a country outline.
+Source: geoBoundaries Open (gbOpen) ADM0 boundaries — curated land-only,
+much more detailed than Natural Earth (13k+ points per country vs 400).
 
-We pull Israel (ISR) + Palestine (PSE; WB+Gaza multipolygon) and union them
-into a single boundary so the rendered border has no internal seams.
+We pull Israel + Palestine and union them so the rendered outline has no
+internal seams between Israel proper, the West Bank, and Gaza.
 
 One-shot. Writes data/israel.geojson — a Feature with the country polygon.
 """
@@ -13,36 +12,41 @@ import json
 from pathlib import Path
 
 import httpx
-from shapely.geometry import shape, mapping
+from shapely.geometry import shape, mapping, Polygon, MultiPolygon
 from shapely.ops import unary_union
 
-URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_countries.geojson"
-TARGETS = {"ISR", "PSE"}
+API = "https://www.geoboundaries.org/api/current/gbOpen/{iso}/ADM0/"
+ISOS = ["ISR", "PSE"]
+
+
+def fetch_country(iso: str):
+    print(f"querying geoBoundaries for {iso} ...")
+    meta = httpx.get(API.format(iso=iso), timeout=60).json()
+    url = meta["gjDownloadURL"]
+    print(f"  download: {url}")
+    fc = httpx.get(url, follow_redirects=True, timeout=120).json()
+    return shape(fc["features"][0]["geometry"])
+
+
+def _clean(geom):
+    """Drop alignment artifacts: keep largest piece, fill all interior holes.
+    geoBoundaries IL + PSE don't share identical vertices on their shared
+    border, so unary_union leaves thousands of sliver holes and tiny outer
+    polygons. Dropping them removes visual noise without changing the shape."""
+    polys = [geom] if isinstance(geom, Polygon) else list(geom.geoms)
+    main_poly = max(polys, key=lambda p: p.area)
+    return Polygon(main_poly.exterior)  # exterior only, drops all holes
 
 
 def main():
-    print(f"downloading {URL} ...")
-    r = httpx.get(URL, timeout=300)
-    r.raise_for_status()
-    data = r.json()
-    print(f"got {len(data['features'])} countries")
-
-    geoms = []
-    for f in data["features"]:
-        iso = f["properties"].get("ISO_A3")
-        if iso in TARGETS:
-            geoms.append(shape(f["geometry"]))
-            print(f"  picked {iso} ({f['properties'].get('NAME')})")
-    if not geoms:
-        raise SystemExit("no ISR/PSE features found")
-
+    geoms = [fetch_country(iso) for iso in ISOS]
     merged = unary_union(geoms)
-    geom = mapping(merged)
-    print(f"unioned -> {geom['type']}, "
-          f"{len(geom['coordinates']) if geom['type']=='MultiPolygon' else 1} polygon(s)")
-
+    cleaned = _clean(merged)
+    geom = mapping(cleaned)
+    print(f"merged -> {merged.geom_type}, cleaned -> {geom['type']} "
+          f"({len(geom['coordinates'][0])} pts)")
     feature = {"type": "Feature",
-               "properties": {"name": "Israel (full extent, land only)"},
+               "properties": {"name": "Israel (ISR + PSE, land only, geoBoundaries)"},
                "geometry": geom}
     out = Path(__file__).parent.parent / "data" / "israel.geojson"
     out.write_text(json.dumps(feature, ensure_ascii=False), encoding="utf-8")
