@@ -1,16 +1,18 @@
 <div align="center">
 
-# 🇮🇱 Israelle
+# 🇮🇱 IsraelE
 
-**A Wordle-style geography game scoped to Israel.**
-Click the satellite map where you think the named place is. Close → big score. Wrong end of the country → nothing.
+**A Wordle-style daily geography game scoped to Israel.**
+6 places a day, same set for everyone. Click the satellite map where you think each place is. Closer = more points. Up to **1000** points per day.
 
-![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)
+[**Play → israel-e.com**](https://israel-e.com)
+
+![Python](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
 ![MapLibre](https://img.shields.io/badge/MapLibre%20GL-4.7-396CB1?logo=maplibre&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
-<img src="docs/homepage.png" alt="Israelle gameplay" width="780" />
+<img src="docs/homepage.png" alt="IsraelE gameplay" width="780" />
 
 </div>
 
@@ -18,10 +20,10 @@ Click the satellite map where you think the named place is. Close → big score.
 
 ## How it works
 
-- 5 rounds per game, random places drawn from ~3.3k Israeli locations
-- Each round shows a place name in **English + Hebrew**; you click the satellite map
-- Score per round = `base × multiplier` (max **300**); total max **1500**
-- Inspired by [maptap.gg](https://maptap.gg), but the map is **just Israel** and the targets go beyond cities — kibbutzim, mountains, archaeological sites, museums, monuments, nature reserves…
+- **6 rounds per day**, identical set for every player. Resets at 00:00 Israel time.
+- 2 cities + 2 settlements + 2 landmarks per puzzle, picked server-side.
+- Each round shows a Hebrew place name; you tap the satellite map.
+- Score per round = `base × multiplier` — max **1000** total per day.
 
 ### Scoring
 
@@ -36,86 +38,89 @@ Quadratic falloff — wrong-end-of-country guesses are basically worthless.
 | 200 km | 4 | trivial |
 | 250 km+ | **0** | giving up |
 
-Multiplier depends on the target:
+Multiplier depends on the category:
 
 | Category | Multiplier | Examples |
 |---|:-:|---|
 | City | **1×** | Tel Aviv, Jerusalem, Haifa, Eilat |
-| Settlement | **2×** | villages, kibbutzim, moshavim |
-| Landmark | **3×** | mountains, museums, archaeological sites, monuments… |
+| Settlement | **1.5×** | villages, kibbutzim, moshavim |
+| Landmark | **2.5×** | mountains, museums, archaeological sites, monuments… |
 
-## Quick start
+## Stack
+
+| Layer | Choice |
+|---|---|
+| Backend | FastAPI + uvicorn on **Railway** (Nixpacks) |
+| Frontend | Static HTML/JS/CSS on **Vercel** (`/api/*` proxied to Railway) |
+| DB + Auth | **Supabase** Postgres + PostgREST + Google OAuth + RLS |
+| Domain | **Cloudflare** DNS → `israel-e.com` (Vercel TLS) |
+| Map engine | [MapLibre GL JS](https://maplibre.org/) (WebGL) |
+| Basemap | [Esri World Imagery](https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer) — free, z19, no API key |
+| Border data | [geoBoundaries gbOpen](https://www.geoboundaries.org/) (Israel + Palestine ADM0, unioned) |
+| Place data | OpenStreetMap via [Overpass API](https://overpass-api.de) — one-shot fetch → committed CSV |
+
+## Local dev
 
 ```bash
 git clone https://github.com/roeimichael/israelle
 cd israelle
 python -m venv .venv
-.venv/Scripts/activate            # Windows
-# source .venv/bin/activate       # macOS / Linux
-pip install -r requirements.txt
-
-uvicorn backend.main:app --host 127.0.0.1 --port 8123
+.venv/Scripts/activate                  # Windows
+# source .venv/bin/activate              # macOS / Linux
+pip install -r backend/requirements.txt
+# Required env (mirror what Railway has):
+# SUPABASE_URL, SUPABASE_KEY (publishable / anon), ALLOWED_ORIGINS, SERVE_FRONTEND=1
+uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
-Open **http://127.0.0.1:8123** → click *Play*.
+Set `SERVE_FRONTEND=1` so the backend mounts `frontend/` at `/` for single-origin local play. In production this is off — Vercel owns the frontend.
 
-### Share with friends — quick (your PC must stay on)
+Open **http://127.0.0.1:8000** → click *Play*.
 
-```bash
-cloudflared tunnel --url http://127.0.0.1:8123
-```
+## Deploy
 
-Public `*.trycloudflare.com` URL. No signup, no DNS, no cost. Dies when you close the terminal.
-
-### Deploy permanently — free Render hosting
-
-A `render.yaml` ships in the repo. To go live:
-
-1. Sign up at [render.com](https://render.com) (free, GitHub login)
-2. New → **Blueprint** → connect this repo
-3. Render reads `render.yaml`, builds, deploys
-4. You get `https://israelle.onrender.com` — share with anyone
-
-Free tier sleeps after 15 min idle (~30 s cold start on first hit). 750 h/mo runtime. Every `git push` to `main` redeploys automatically.
-
-## Tech
-
-| Layer | Choice | Why |
-|---|---|---|
-| Basemap | [Esri World Imagery](https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer) | Free satellite tiles, deep zoom (z19), no API key, no labels |
-| Map engine | [MapLibre GL JS](https://maplibre.org/) | Open-source, WebGL vector/raster rendering |
-| Backend | FastAPI + uvicorn | Async, schema-validated, ships static assets too |
-| Data | OpenStreetMap via [Overpass API](https://overpass-api.de) | One-shot fetch → committed CSV; no live deps |
+See [`docs/MIGRATION.md`](docs/MIGRATION.md) for the full Railway + Vercel + Cloudflare + Supabase + Google OAuth setup. Every push to `main` redeploys both Railway (backend) and Vercel (frontend) automatically.
 
 ## Repo layout
 
 ```
-backend/        FastAPI app — routes, scoring, session state, CSV loader
+backend/        FastAPI app — routes, scoring, place loader, supabase client
 frontend/       index.html, app.js, style.css (vanilla, no build step)
-scripts/        one-time data ETL (Overpass fetch + merge)
-data/           places.csv (committed, ~3.3k entries)
-docs/           screenshots
+scripts/        one-shot data ETL (Overpass + geoBoundaries fetch, merge)
+data/           places.csv (~3.3k entries), polygons.json, israel.geojson
+docs/           screenshots, migration guide
+nixpacks.toml   Railway build config (venv + uvicorn entrypoint)
+railway.json    Railway deploy config (Nixpacks, restart-on-failure)
+vercel.json     Vercel static deploy + /api/* rewrite to Railway
 ```
 
-## API
+## API (used by the frontend)
 
 | Method | Path | Returns |
 |---|---|---|
-| `POST` | `/api/game/new` | `{game_id, rounds: [5 ids]}` |
-| `GET`  | `/api/round/{id}` | `{name_en, name_he, type, category, multiplier}` |
-| `POST` | `/api/round/{id}/guess` | `{distance_km, base_score, multiplier, round_score, true_lat, true_lon, round_number, total_score, done}` |
+| `GET` | `/api/today` | `{date, day_number, rounds: [6], tile_hash}` |
+| `GET` | `/api/me/today` | (auth) signed-in user's today state |
+| `GET` | `/api/today/me?player_id=...` | guest's today state |
+| `POST` | `/api/today/guess` | scores a guess, persists, returns reveal payload |
+| `GET` | `/api/me/history` | (auth) last 60 games |
+| `GET` | `/api/me/stats?player_id=...` | streaks + histogram |
+| `GET` | `/api/leaderboard?date=...` | top 20 for the day |
+| `GET` | `/api/israel-border` | land-only Israel+PSE polygon (13.5k pts) |
+| `GET` | `/api/config` | Supabase URL + publishable key for the browser |
 
 ## Rebuilding the place data
 
-The shipped `data/places.csv` is enough to play. To refresh it from current OSM:
+Shipped `data/places.csv` is enough to play. To refresh:
 
 ```bash
-python scripts/fetch_overpass.py    # ~30s, writes data/raw/overpass.json
-python scripts/build_places.py      # cleans, merges, writes data/places.csv
+pip install -r scripts/requirements.txt
+python scripts/fetch_overpass.py        # writes data/raw/overpass.json
+python scripts/fetch_israel_border.py   # rebuilds data/israel.geojson
+python scripts/build_places.py          # merges → data/places.csv
 ```
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
 
-Map data © OpenStreetMap contributors. Satellite imagery © Esri.
+Map data © OpenStreetMap contributors. Borders © geoBoundaries (CC-BY 4.0). Satellite imagery © Esri.

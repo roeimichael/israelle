@@ -1,6 +1,7 @@
 import base64
 import hashlib
 import json
+import logging
 import os
 from datetime import date, datetime
 from pathlib import Path
@@ -16,25 +17,37 @@ from pydantic import BaseModel
 from . import places, supa
 from .scoring import base_score, haversine_km
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+log = logging.getLogger("israelle")
+
 app = FastAPI(title="israelle")
 
-# Comma-separated origins, e.g. "https://israelle.com,https://*.vercel.app".
-# Default permissive for dev; tighten on Railway via env.
-_origins = os.environ.get("ALLOWED_ORIGINS", "*").split(",")
+# Comma-separated origins, e.g. "https://israel-e.com,https://*.vercel.app".
+_origins_raw = os.environ.get("ALLOWED_ORIGINS", "").strip()
+if not _origins_raw:
+    log.warning("ALLOWED_ORIGINS unset — falling back to '*'. Set this on Railway in prod.")
+    _origins = ["*"]
+else:
+    _origins = [o.strip() for o in _origins_raw.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[o.strip() for o in _origins if o.strip()],
+    allow_origins=_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
     max_age=86400,
 )
 
-FRONTEND = Path(__file__).parent.parent / "frontend"
-DOCS = Path(__file__).parent.parent / "docs"
-DATA = Path(__file__).parent.parent / "data"
+ROOT = Path(__file__).parent.parent
+FRONTEND = ROOT / "frontend"
+DOCS = ROOT / "docs"
+DATA = ROOT / "data"
+SERVE_FRONTEND = os.environ.get("SERVE_FRONTEND", "0") == "1"
 
-ISRAEL_BORDER = json.loads((DATA / "israel.geojson").read_text(encoding="utf-8"))
+_border_path = DATA / "israel.geojson"
+if not _border_path.exists():
+    raise RuntimeError(f"missing required data file: {_border_path}")
+ISRAEL_BORDER = json.loads(_border_path.read_text(encoding="utf-8"))
 
 IL_TZ = ZoneInfo("Asia/Jerusalem")
 # Day #1 of IsraelE. All future "puzzle numbers" are (today - EPOCH).days + 1.
@@ -52,6 +65,43 @@ def _day_number(d_iso: str) -> int:
 def _jwt(request: Request) -> str | None:
     h = request.headers.get("Authorization", "")
     return h[7:].strip() if h.startswith("Bearer ") else None
+
+
+# Daily picks cache: pins pick_or_create_daily's result for the day so
+# /api/today and /api/today/guess always see identical round_idx → place_id.
+# If the RPC ever returns a different order between calls, this prevents
+# silent score/place mismatches. Self-heals at midnight (new date key).
+_PICKS_CACHE: dict[str, list[int]] = {}
+
+
+def _daily_picks(d: str) -> list[int]:
+    hit = _PICKS_CACHE.get(d)
+    if hit is not None:
+        return hit
+    raw = supa.rpc("pick_or_create_daily", {"p_date": d})
+    picks = [int(pid) for pid in raw]
+    _PICKS_CACHE[d] = picks
+    # Bound memory; keys are date strings so this stays tiny.
+    if len(_PICKS_CACHE) > 7:
+        for k in sorted(_PICKS_CACHE)[:-7]:
+            _PICKS_CACHE.pop(k, None)
+    return picks
+
+
+def _require_player_access(player_id: str, request: Request) -> None:
+    """Reject reads of another user's data. Guests (auth_user_id NULL) stay
+    open — same risk surface as before for that bucket, but signed-in users
+    are now protected from horizontal access by UUID guessing/leaking."""
+    rows = supa.select("players", select="auth_user_id", id=f"eq.{player_id}")
+    if not rows:
+        return  # unknown player_id — nothing to leak yet
+    owner = rows[0].get("auth_user_id")
+    if not owner:
+        return  # guest row, no auth attached
+    jwt = _jwt(request)
+    caller = supa.verify_jwt(jwt) if jwt else None
+    if caller != owner:
+        raise HTTPException(403, "not your data")
 
 
 def _tile_hash(d: str, coords: list[tuple[float, float]]) -> str:
@@ -79,7 +129,7 @@ def israel_border():
 @app.get("/api/today")
 def today():
     d = _il_today_iso()
-    place_ids = supa.rpc("pick_or_create_daily", {"p_date": d})
+    place_ids = _daily_picks(d)
     rounds = []
     coords: list[tuple[float, float]] = []
     for ix, pid in enumerate(place_ids):
@@ -175,7 +225,8 @@ def me_today(request: Request, hint: str | None = None):
 
 
 @app.get("/api/today/me")
-def today_me(player_id: str):
+def today_me(player_id: str, request: Request):
+    _require_player_access(player_id, request)
     date = _il_today_iso()
     games = supa.select(
         "games",
@@ -228,8 +279,8 @@ def today_guess(body: GuessIn, request: Request):
         raise HTTPException(400, "bad round_idx")
 
     date = _il_today_iso()
-    place_ids = supa.rpc("pick_or_create_daily", {"p_date": date})
-    place_id = int(place_ids[body.round_idx])
+    place_ids = _daily_picks(date)
+    place_id = place_ids[body.round_idx]
     p = places.get(place_id)
     if not p:
         raise HTTPException(500, "place missing locally")
@@ -342,9 +393,10 @@ def history(request: Request):
 
 
 @app.get("/api/me/stats")
-def my_stats(player_id: str):
+def my_stats(player_id: str, request: Request):
     """Returns games played, current streak, max streak, score histogram.
-    Works anonymously (player_id from localStorage is enough)."""
+    Works anonymously for guest players; requires matching JWT for claimed ones."""
+    _require_player_access(player_id, request)
     rows = supa.select(
         "games",
         select="puzzle_date,total_score",
@@ -432,10 +484,8 @@ def config():
 
 
 # ─── static mounts + index ───────────────────────────────────────────────────
-
-
-app.mount("/static", StaticFiles(directory=str(FRONTEND)), name="static")
-app.mount("/docs", StaticFiles(directory=str(DOCS)), name="docs")
+# Only mount frontend/docs locally (SERVE_FRONTEND=1). In prod, Vercel serves
+# the SPA, so the backend doesn't need the frontend dir at all.
 
 
 @app.middleware("http")
@@ -443,14 +493,19 @@ async def no_cache_static(request: Request, call_next):
     response = await call_next(request)
     path = request.url.path
     if path.startswith("/api/"):
-        # /api/today carries tile_hash. We never want a stale copy from
-        # the browser cache — that's what made fast-path skip earlier.
         response.headers["Cache-Control"] = "no-store"
     elif path.startswith("/static/") or path == "/":
         response.headers["Cache-Control"] = "no-cache, must-revalidate"
     return response
 
 
-@app.get("/")
-def index():
-    return FileResponse(FRONTEND / "index.html", headers={"Cache-Control": "no-cache, must-revalidate"})
+if SERVE_FRONTEND and FRONTEND.exists():
+    app.mount("/static", StaticFiles(directory=str(FRONTEND)), name="static")
+    if DOCS.exists():
+        app.mount("/docs", StaticFiles(directory=str(DOCS)), name="docs")
+
+    @app.get("/")
+    def index():
+        return FileResponse(FRONTEND / "index.html", headers={"Cache-Control": "no-cache, must-revalidate"})
+else:
+    log.info("frontend mount disabled (SERVE_FRONTEND=%s, exists=%s)", SERVE_FRONTEND, FRONTEND.exists())

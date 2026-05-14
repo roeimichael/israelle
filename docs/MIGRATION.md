@@ -1,13 +1,13 @@
 # Migration: Render → Railway + Vercel + Cloudflare
 
-Goal: backend on Railway (paid hobby), frontend on Vercel, domain on Cloudflare. Single public origin (e.g. `israelle.com`), API path-prefixed.
+Goal: backend on Railway (paid hobby), frontend on Vercel, domain on Cloudflare. Single public origin (e.g. `israel-e.com`), API path-prefixed.
 
 ## Architecture after migration
 
 ```
 Browser
-  → https://israelle.com/*           (Vercel — static frontend)
-  → https://israelle.com/api/*       (Vercel rewrite → Railway)
+  → https://israel-e.com/*           (Vercel — static frontend)
+  → https://israel-e.com/api/*       (Vercel rewrite → Railway)
                                      → https://<svc>.up.railway.app
                                      → Supabase (DB + Auth)
 ```
@@ -28,7 +28,7 @@ Vercel rewrites `/api/*` to Railway. Frontend keeps relative `/api/*` paths — 
 |---|---|---|
 | `SUPABASE_URL` | `https://<project>.supabase.co` | copy from Supabase project settings |
 | `SUPABASE_KEY` | `<publishable / anon key>` | publishable key, NOT service-role |
-| `ALLOWED_ORIGINS` | `https://israelle.com,https://www.israelle.com,https://<preview>.vercel.app` | comma-separated, no trailing slash |
+| `ALLOWED_ORIGINS` | `https://israel-e.com,https://www.israel-e.com,https://<preview>.vercel.app` | comma-separated, no trailing slash |
 | `PYTHON_VERSION` | `3.11.9` | optional, Nixpacks default usually fine |
 
 ### 1c. Generate public URL
@@ -38,7 +38,8 @@ curl https://<svc>.up.railway.app/api/today
 ```
 
 ### 1d. Health check
-`railway.json` already pings `/api/israel-border`. Confirm green in Deployments.
+Optional — `railway.json` no longer sets a healthcheckPath; Railway uses TCP probe.
+You can re-add `"healthcheckPath": "/api/israel-border"` under `deploy` if you want explicit HTTP probing.
 
 ---
 
@@ -68,10 +69,10 @@ Commit + push. Vercel auto-deploys.
 ## 3. Domain → Cloudflare
 
 ### 3a. Buy
-Cloudflare Registrar → search `israelle.com` (or your TLD) → checkout. ~$10/yr.
+Cloudflare Registrar → search `israel-e.com` (or your TLD) → checkout. ~$10/yr.
 
 ### 3b. Add to Vercel
-Vercel project → Settings → Domains → Add `israelle.com` + `www.israelle.com`.
+Vercel project → Settings → Domains → Add `israel-e.com` + `www.israel-e.com`.
 Vercel will display required DNS records (A `76.76.21.21` for apex, CNAME for `www`).
 
 ### 3c. DNS in Cloudflare
@@ -81,7 +82,7 @@ Cloudflare Dashboard → DNS → add records exactly as Vercel showed. **Proxy s
 Cloudflare → SSL/TLS → Overview → set to **Full**. (Not Flexible — Vercel demands HTTPS to origin.)
 
 ### 3e. Wait + verify
-DNS propagation: 1–30 min. Then `https://israelle.com/` should serve the game.
+DNS propagation: 1–30 min. Then `https://israel-e.com/` should serve the game.
 
 ---
 
@@ -89,10 +90,10 @@ DNS propagation: 1–30 min. Then `https://israelle.com/` should serve the game.
 
 Supabase Dashboard → Authentication → URL Configuration:
 
-- **Site URL:** `https://israelle.com`
+- **Site URL:** `https://israel-e.com`
 - **Redirect URLs** (add all that apply):
-  - `https://israelle.com/**`
-  - `https://www.israelle.com/**`
+  - `https://israel-e.com/**`
+  - `https://www.israel-e.com/**`
   - `https://<project>.vercel.app/**` (preview deploys)
   - `http://localhost:8000/**` (local dev)
 
@@ -103,8 +104,8 @@ Supabase Dashboard → Authentication → URL Configuration:
 console.cloud.google.com → APIs & Services → Credentials → OAuth 2.0 Client used by Supabase:
 
 **Authorized JavaScript origins:**
-- `https://israelle.com`
-- `https://www.israelle.com`
+- `https://israel-e.com`
+- `https://www.israel-e.com`
 - `https://<supabase-project>.supabase.co`
 - `http://localhost:8000`
 
@@ -125,9 +126,9 @@ After 24h of stable Cloudflare traffic:
 ---
 
 ## 7. Smoke test checklist
-- [ ] `https://israelle.com/` loads, splash → start card
+- [ ] `https://israel-e.com/` loads, splash → start card
 - [ ] Guest play through 6 rounds → end card
-- [ ] Google sign-in → redirected back to `israelle.com`, user chip shows
+- [ ] Google sign-in → redirected back to `israel-e.com`, user chip shows
 - [ ] Signed-in play persists; reload returns to end card
 - [ ] `/api/leaderboard?date=...` shows today's players
 - [ ] Mobile (real device, not emulated) reaches site over 4G/5G

@@ -167,12 +167,12 @@ function hideSplash() {
   setTimeout(() => s.remove(), 600);
 }
 
-// Failsafe: don't leave the user staring at a forever-spinning star even if
-// Render is cold-starting. ~25 s comfortably covers a warm dyno + most cold ones.
+// Failsafe: kill splash after 8s no matter what. Railway is warm, so a long
+// hang means something's wrong; show the start card so the user can retry.
 setTimeout(() => {
   const s = document.getElementById("splash");
   if (s && !s.classList.contains("fading")) hideSplash();
-}, 25000);
+}, 8000);
 
 async function loadTodayIntoState() {
   try {
@@ -224,7 +224,7 @@ async function loadTodayIntoState() {
       }
     }
     if (!me) {
-      me = await fetchJSON(`/api/today/me?player_id=${encodeURIComponent(playerId)}`);
+      me = await fetchJSON(`/api/today/me?player_id=${encodeURIComponent(playerId)}`, authHeaders());
     }
 
     if (me.done) {
@@ -388,7 +388,7 @@ async function beginDay() {
   try {
     const [today, me] = await Promise.all([
       fetchJSON("/api/today"),
-      fetchJSON(`/api/today/me?player_id=${encodeURIComponent(playerId)}`),
+      fetchJSON(`/api/today/me?player_id=${encodeURIComponent(playerId)}`, authHeaders()),
     ]);
     state.date = today.date;
     state.dayNumber = today.day_number;
@@ -775,7 +775,7 @@ function buildShareText() {
     .map((g) => `${g.base_score}${scoreEmoji(g.base_score / 100)}`)
     .join(" ");
   return (
-    `בוא נראה כמה אתה מכיר את ישראל ${location.origin}\n` +
+    `בואו נראה כמה אתם מכירים את ישראל ${location.origin}\n` +
     `\n` +
     `${line}\n` +
     `ניקוד סופי: ${state.totalScore}/1000`
@@ -873,21 +873,30 @@ function escapeHtml(s) {
 }
 
 function startCountdown() {
+  let prevTotal = null;
+  let reloaded = false;
   setInterval(() => {
     const now = new Date();
     const il = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Jerusalem" }));
     const next = new Date(il);
     next.setHours(24, 0, 0, 0);
-    let s = Math.max(0, Math.floor((next - il) / 1000));
-    const h = String(Math.floor(s / 3600)).padStart(2, "0");
-    s -= h * 3600;
-    const m = String(Math.floor(s / 60)).padStart(2, "0");
-    const ss = String(s - m * 60).padStart(2, "0");
+    const total = Math.max(0, Math.floor((next - il) / 1000));
+    const h = String(Math.floor(total / 3600)).padStart(2, "0");
+    let rem = total - h * 3600;
+    const m = String(Math.floor(rem / 60)).padStart(2, "0");
+    const ss = String(rem - m * 60).padStart(2, "0");
     const txt = `${h}:${m}:${ss}`;
     for (const id of ["cd", "cd2"]) {
       const el = document.getElementById(id);
       if (el) el.textContent = txt;
     }
+    // Detect midnight roll-over: countdown jumps from near-zero back near 24h.
+    // Reload so an idle user picks up the fresh puzzle automatically.
+    if (!reloaded && prevTotal !== null && prevTotal < 30 && total > 86000) {
+      reloaded = true;
+      setTimeout(() => location.reload(), 1500);
+    }
+    prevTotal = total;
   }, 1000);
 }
 
@@ -922,7 +931,7 @@ async function openStats() {
   showSpinner(true);
   let s;
   try {
-    s = await fetchJSON(`/api/me/stats?player_id=${encodeURIComponent(playerId)}`);
+    s = await fetchJSON(`/api/me/stats?player_id=${encodeURIComponent(playerId)}`, authHeaders());
   } catch {
     flashToast("טעינת סטטיסטיקות נכשלה");
     showSpinner(false);
@@ -1021,11 +1030,26 @@ async function _initPaintIndex(seed, k) {
   return JSON.parse(new TextDecoder().decode(out));
 }
 
+// Pass to fetchJSON for any endpoint whose backend gates on player ownership.
+// Returns `{}` (or `{headers}` with nothing) when guest — server-side guard
+// then falls back to "guest player_id" rules.
+function authHeaders() {
+  return session?.access_token
+    ? { headers: { Authorization: `Bearer ${session.access_token}` } }
+    : {};
+}
+
 // ─── Fetch + spinner ────────────────────────────────────────────────────────
-async function fetchJSON(url, opts) {
-  const r = await fetch(url, opts);
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
+async function fetchJSON(url, opts = {}, timeoutMs = 15000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, { ...opts, signal: ctrl.signal });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } finally {
+    clearTimeout(t);
+  }
 }
 function showSpinner(on) {
   document.getElementById("spinner").classList.toggle("hidden", !on);
