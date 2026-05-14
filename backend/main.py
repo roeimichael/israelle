@@ -1,12 +1,14 @@
 import base64
 import hashlib
 import json
+import os
 from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -15,6 +17,18 @@ from . import places, supa
 from .scoring import base_score, haversine_km
 
 app = FastAPI(title="israelle")
+
+# Comma-separated origins, e.g. "https://israelle.com,https://*.vercel.app".
+# Default permissive for dev; tighten on Railway via env.
+_origins = os.environ.get("ALLOWED_ORIGINS", "*").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in _origins if o.strip()],
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+    max_age=86400,
+)
 
 FRONTEND = Path(__file__).parent.parent / "frontend"
 DOCS = Path(__file__).parent.parent / "docs"
