@@ -1,0 +1,10 @@
+backend/
+scripts/
+data/
+.venv/
+__pycache__/
+*.pyc
+requirements.txt
+render.yaml
+railway.json
+pyproject.toml
