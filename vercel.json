@@ -1,14 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "cleanUrls": false,
-  "trailingSlash": false,
+  "framework": null,
+  "buildCommand": "mkdir -p public/docs && cp frontend/index.html public/index.html && cp frontend/app.js public/app.js && cp frontend/style.css public/style.css && cp frontend/manifest.json public/manifest.json && cp docs/flag.png public/docs/flag.png && cp docs/homepage.png public/docs/homepage.png",
+  "outputDirectory": "public",
+  "installCommand": "echo skip",
   "rewrites": [
     {
       "source": "/api/:path*",
       "destination": "https://israele-production.up.railway.app/api/:path*"
     },
-    { "source": "/", "destination": "/frontend/index.html" },
-    { "source": "/static/:path*", "destination": "/frontend/:path*" }
+    { "source": "/static/:path*", "destination": "/:path*" }
   ],
   "headers": [
     {
@@ -16,15 +17,7 @@
       "headers": [{ "key": "Cache-Control", "value": "no-store" }]
     },
     {
-      "source": "/frontend/app.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
-    },
-    {
-      "source": "/frontend/style.css",
-      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
-    },
-    {
-      "source": "/frontend/manifest.json",
+      "source": "/(app.js|style.css|manifest.json)",
       "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
     },
     {
