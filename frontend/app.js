@@ -327,27 +327,48 @@ function onFreshGuest() {
 }
 
 // ─── Israel mask + border ───────────────────────────────────────────────────
-// Heuristic bbox for maritime ring segments (so we don't draw a border line
-// down the Mediterranean / Gulf of Aqaba — only land boundaries are stroked).
-const _IS_MARITIME = (lon, lat) =>
-  (lon < 34.65 && lat > 31.20 && lat < 33.15) ||   // Mediterranean coast
-  (lat < 29.65);                                     // Gulf of Aqaba (Eilat)
-
-function landOnlyBorder(rings) {
-  const features = [];
-  for (const ring of rings) {
-    let cur = [];
-    for (const pt of ring) {
-      if (_IS_MARITIME(pt[0], pt[1])) {
-        if (cur.length >= 2) features.push({ type: "Feature", geometry: { type: "LineString", coordinates: cur } });
-        cur = [];
-      } else {
-        cur.push(pt);
-      }
+// gov.il polygon includes territorial-water bulges off the Mediterranean
+// coast. We clip it to the actual coastline so the dark mask wraps land only
+// and the border draws as one clean closed polygon.
+const _MED_COAST = [
+  [33.10, 35.10],
+  [32.82, 34.99],
+  [32.08, 34.78],
+  [31.80, 34.65],
+  [31.50, 34.45],
+  [31.22, 34.25],
+];
+function _medCoastLon(lat) {
+  if (lat >= _MED_COAST[0][0]) return _MED_COAST[0][1];
+  if (lat <= _MED_COAST[_MED_COAST.length - 1][0]) return _MED_COAST[_MED_COAST.length - 1][1];
+  for (let i = 0; i < _MED_COAST.length - 1; i++) {
+    const [la, lo] = _MED_COAST[i];
+    const [lb, lob] = _MED_COAST[i + 1];
+    if (lat <= la && lat >= lb) {
+      const t = (la - lat) / (la - lb);
+      return lo + (lob - lo) * t;
     }
-    if (cur.length >= 2) features.push({ type: "Feature", geometry: { type: "LineString", coordinates: cur } });
   }
-  return { type: "FeatureCollection", features };
+  return 34.5;
+}
+const _IS_MARITIME = (lon, lat) => {
+  if (lat >= 31.22 && lat <= 33.10 && lon < _medCoastLon(lat) - 0.01) return true;  // Med
+  if (lat < 29.55) return true;                                                       // Aqaba
+  return false;
+};
+
+// Drop maritime points and return the remaining ring closed. Implicit straight
+// edge between the last-land and next-land points follows the coast closely.
+function clipRingToLand(ring) {
+  const out = [];
+  for (const pt of ring) {
+    if (!_IS_MARITIME(pt[0], pt[1])) out.push(pt);
+  }
+  if (out.length < 3) return ring;
+  const [x0, y0] = out[0];
+  const [xn, yn] = out[out.length - 1];
+  if (x0 !== xn || y0 !== yn) out.push([x0, y0]);
+  return out;
 }
 
 function _pointInRing(lon, lat, ring) {
@@ -365,19 +386,18 @@ function _pointInRing(lon, lat, ring) {
 
 async function addIsraelMask() {
   const border = await fetch("/api/israel-border").then((r) => r.json());
-  const polys = border.geometry.type === "Polygon"
+  const rawPolys = border.geometry.type === "Polygon"
     ? [border.geometry.coordinates[0]]
     : border.geometry.coordinates.map((p) => p[0]);
+  const polys = rawPolys.map(clipRingToLand);
   state._borderRings = polys;     // cached for point-in-polygon click filter
   const worldRing = [[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]];
   map.addSource("il-mask", { type: "geojson",
     data: { type: "Feature", geometry: { type: "Polygon", coordinates: [worldRing, ...polys] } } });
   map.addLayer({ id: "il-mask-fill", type: "fill", source: "il-mask",
     paint: { "fill-color": "#0a1424", "fill-opacity": 0.65 } });
-  // Draw the border only along land segments — coastlines are skipped so the
-  // outline doesn't bleed into the Mediterranean / Gulf of Aqaba.
-  const landBorder = landOnlyBorder(polys);
-  map.addSource("il-border", { type: "geojson", data: landBorder });
+  map.addSource("il-border", { type: "geojson",
+    data: { type: "Feature", geometry: { type: "Polygon", coordinates: polys } } });
   map.addLayer({ id: "il-border-glow", type: "line", source: "il-border",
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": "#4d7df0", "line-width": 6, "line-opacity": 0.25, "line-blur": 3 } });
