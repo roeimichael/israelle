@@ -73,8 +73,12 @@ body { background: var(--bg); }
   margin-bottom: 4px; letter-spacing: 0.3px;
 }
 #round-info span { unicode-bidi: isolate; }
-#prompt { font-size: 20px; font-weight: 600; }
+#prompt {
+  font-size: 20px; font-weight: 600;
+  overflow-wrap: anywhere; word-break: break-word; line-height: 1.3;
+}
 #place-name-he { font-weight: 700; margin: 0 6px; color: var(--il-blue-light); }
+#reveal-place { overflow-wrap: anywhere; word-break: break-word; }
 #place-type {
   font-size: 12px; opacity: 0.55; font-weight: 400;
   text-transform: capitalize; margin-top: 3px; letter-spacing: 0.3px;
@@ -284,11 +288,14 @@ a.place-name:hover { text-decoration: underline; }
 .place-img img { width: 100%; height: 100%; object-fit: cover; }
 .place-img .no-image { font-size: 22px; opacity: 0.55; }
 .place-info { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.place-name { font-weight: 700; font-size: 13px; color: var(--il-blue-light); }
+.place-name {
+  font-weight: 700; font-size: 13px; color: var(--il-blue-light);
+  overflow-wrap: anywhere; word-break: break-word; line-height: 1.25;
+}
 .place-desc {
   font-size: 11px; line-height: 1.4; opacity: 0.75;
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
-  overflow: hidden;
+  overflow: hidden; overflow-wrap: anywhere;
 }
 
 /* ─── Animated map markers ─── */

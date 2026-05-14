@@ -1,3 +1,5 @@
+import base64
+import hashlib
 import json
 from datetime import date, datetime
 from pathlib import Path
@@ -38,6 +40,17 @@ def _jwt(request: Request) -> str | None:
     return h[7:].strip() if h.startswith("Bearer ") else None
 
 
+def _tile_hash(d: str, coords: list[tuple[float, float]]) -> str:
+    """Pack today's six (lat, lon) pairs into an obfuscated string the client
+    can recover synchronously, so the reveal animation can start the instant
+    the user taps — without waiting for the network round-trip on the score
+    endpoint. Server still owns scoring; this is purely a UX shortcut."""
+    payload = json.dumps([[round(la, 6), round(lo, 6)] for la, lo in coords], separators=(",", ":")).encode("utf-8")
+    key = hashlib.sha256(f"ils-puzzle-{d}".encode("utf-8")).digest()
+    cipher = bytes(b ^ key[i % len(key)] for i, b in enumerate(payload))
+    return base64.b64encode(cipher).decode("ascii")
+
+
 # ─── static + map data ───────────────────────────────────────────────────────
 
 
@@ -54,6 +67,7 @@ def today():
     d = _il_today_iso()
     place_ids = supa.rpc("pick_or_create_daily", {"p_date": d})
     rounds = []
+    coords: list[tuple[float, float]] = []
     for ix, pid in enumerate(place_ids):
         p = places.get(int(pid))
         if not p:
@@ -65,7 +79,13 @@ def today():
             "category": p["category"],
             "multiplier": p["multiplier"],
         })
-    return {"date": d, "day_number": _day_number(d), "rounds": rounds}
+        coords.append((p["lat"], p["lon"]))
+    return {
+        "date": d,
+        "day_number": _day_number(d),
+        "rounds": rounds,
+        "tile_hash": _tile_hash(d, coords),
+    }
 
 
 @app.get("/api/me/today")

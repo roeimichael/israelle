@@ -49,6 +49,9 @@ const state = {
   awaitingClick: false,
   guessMarker: null, truthMarker: null, cometMarker: null,
   lineId: null, polyId: null,
+  // Per-round truth coords decoded client-side from /api/today.tile_hash,
+  // used to start the reveal animation before /api/today/guess returns.
+  _idx: null,
 };
 
 // Israel-themed score emojis (5 buckets, best → worst):
@@ -177,6 +180,12 @@ async function loadTodayIntoState() {
     state.dayNumber = t.day_number;
     state.date = t.date;
     state.rounds = t.rounds;
+    // Hydrate the per-round paint index — used to draw the reveal line
+    // without waiting for the score round-trip.
+    if (t.tile_hash) {
+      try { state._idx = await _initPaintIndex(t.tile_hash, t.date); }
+      catch (_) { state._idx = null; }
+    }
     const tag = document.getElementById("day-num-start");
     if (tag) tag.textContent = `#${t.day_number}`;
 
@@ -413,10 +422,11 @@ async function onMapClick(e) {
   popMarker(state.guessMarker);
   spawnRipple([lng, lat], "#ffb86b", 3.4, 1100, 2);
 
+  // Kick off the score request in the background. Don't await yet — start
+  // the reveal animation in parallel using the locally-known truth coords.
   const headers = { "Content-Type": "application/json" };
   if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
-
-  const res = await fetch("/api/today/guess", {
+  const fetchP = fetch("/api/today/guess", {
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -425,35 +435,56 @@ async function onMapClick(e) {
       round_idx: state.cursor,
       lat, lon: lng,
     }),
-  }).then((r) => r.json());
+  }).then((r) => r.json()).catch((err) => ({ _err: err }));
 
-  if (res.detail) { flashToast(res.detail); return; }
+  const localTruth = state._idx?.[state.cursor];   // [lat, lon] or undefined
+  if (localTruth) {
+    const truthLngLat = [localTruth[1], localTruth[0]];
+    // Simple bbox from guess+truth so the camera frames both immediately;
+    // refined later if the server gives us a polygon.
+    map.fitBounds([
+      [Math.min(lng, truthLngLat[0]), Math.min(lat, truthLngLat[1])],
+      [Math.max(lng, truthLngLat[0]), Math.max(lat, truthLngLat[1])],
+    ], { padding: 120, duration: 900, maxZoom: 13 });
+
+    await animateLine([lng, lat], truthLngLat, 3000);
+
+    spawnRipple(truthLngLat, "#4d7df0", 5.2, 1500, 3);
+    state.truthMarker = new maplibregl.Marker({ element: makeDot("truth") })
+      .setLngLat(truthLngLat).addTo(map);
+    popMarker(state.truthMarker, true);
+  }
+
+  const res = await fetchP;
+  if (res._err || res.detail) {
+    flashToast(res.detail || "שגיאה בשמירת הניקוד");
+    return;
+  }
 
   state.totalScore = res.total_score;
   state.played.push({ ...res, name_he: state.rounds[state.cursor].name_he });
 
-  const truthLngLat = [res.true_lon, res.true_lat];
-  drawPolygon(res.polygon);
+  // If we didn't have local truth (no idx, e.g. first boot before hydrate),
+  // run the full reveal sequence now that we have the server data.
+  if (!localTruth) {
+    const truthLngLat = [res.true_lon, res.true_lat];
+    drawPolygon(res.polygon);
+    const bbox = polygonBbox(res.polygon) ?? [
+      [Math.min(lng, res.true_lon), Math.min(lat, res.true_lat)],
+      [Math.max(lng, res.true_lon), Math.max(lat, res.true_lat)],
+    ];
+    map.fitBounds(bbox, { padding: 160, duration: 1200 });
+    await animateLine([lng, lat], truthLngLat, 3000);
+    spawnRipple(truthLngLat, "#4d7df0", 5.2, 1500, 3);
+    state.truthMarker = new maplibregl.Marker({ element: makeDot("truth") })
+      .setLngLat(truthLngLat).addTo(map);
+    popMarker(state.truthMarker, true);
+  } else {
+    // Local-truth path already drew everything; just add the polygon if any.
+    drawPolygon(res.polygon);
+  }
 
-  const bbox = polygonBbox(res.polygon) ?? [
-    [Math.min(lng, res.true_lon), Math.min(lat, res.true_lat)],
-    [Math.max(lng, res.true_lon), Math.max(lat, res.true_lat)],
-  ];
-  bbox[0][0] = Math.min(bbox[0][0], lng);
-  bbox[0][1] = Math.min(bbox[0][1], lat);
-  bbox[1][0] = Math.max(bbox[1][0], lng);
-  bbox[1][1] = Math.max(bbox[1][1], lat);
-  map.fitBounds(bbox, { padding: 160, duration: 1200 });
-
-  await animateLine([lng, lat], truthLngLat, 3000);
-
-  // Truth reveal: shockwave + bouncy pop
-  spawnRipple(truthLngLat, "#4d7df0", 5.2, 1500, 3);
-  state.truthMarker = new maplibregl.Marker({ element: makeDot("truth") })
-    .setLngLat(truthLngLat).addTo(map);
-  popMarker(state.truthMarker, true);
-
-  await sleep(450);
+  await sleep(300);
   showReveal(res);
 }
 
@@ -943,6 +974,18 @@ function chime(freq = 880) {
     o.start();
     o.stop(audioCtx.currentTime + 0.36);
   } catch {}
+}
+
+// Hydrate per-round paint coords from a packed source string. Kept simple
+// on purpose — the score endpoint is still authoritative.
+async function _initPaintIndex(seed, k) {
+  const enc = new TextEncoder();
+  const buf = await crypto.subtle.digest("SHA-256", enc.encode("ils-puzzle-" + k));
+  const m = new Uint8Array(buf);
+  const raw = Uint8Array.from(atob(seed), (c) => c.charCodeAt(0));
+  const out = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) out[i] = raw[i] ^ m[i % m.length];
+  return JSON.parse(new TextDecoder().decode(out));
 }
 
 // ─── Fetch + spinner ────────────────────────────────────────────────────────
