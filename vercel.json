@@ -5,22 +5,30 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://REPLACE-WITH-RAILWAY-URL/api/:path*"
+      "destination": "https://israele-production.up.railway.app/api/:path*"
     },
     { "source": "/", "destination": "/frontend/index.html" },
     { "source": "/static/:path*", "destination": "/frontend/:path*" }
   ],
   "headers": [
     {
-      "source": "/api/:path*",
+      "source": "/api/(.*)",
       "headers": [{ "key": "Cache-Control", "value": "no-store" }]
     },
     {
-      "source": "/frontend/(app.js|style.css|manifest.json)",
+      "source": "/frontend/app.js",
       "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
     },
     {
-      "source": "/docs/(.*\\.(png|jpg|jpeg|svg|webp))",
+      "source": "/frontend/style.css",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+    },
+    {
+      "source": "/frontend/manifest.json",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+    },
+    {
+      "source": "/docs/(.*)",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
     }
   ]
