@@ -327,17 +327,57 @@ function onFreshGuest() {
 }
 
 // ─── Israel mask + border ───────────────────────────────────────────────────
+// Heuristic bbox for maritime ring segments (so we don't draw a border line
+// down the Mediterranean / Gulf of Aqaba — only land boundaries are stroked).
+const _IS_MARITIME = (lon, lat) =>
+  (lon < 34.65 && lat > 31.20 && lat < 33.15) ||   // Mediterranean coast
+  (lat < 29.65);                                     // Gulf of Aqaba (Eilat)
+
+function landOnlyBorder(rings) {
+  const features = [];
+  for (const ring of rings) {
+    let cur = [];
+    for (const pt of ring) {
+      if (_IS_MARITIME(pt[0], pt[1])) {
+        if (cur.length >= 2) features.push({ type: "Feature", geometry: { type: "LineString", coordinates: cur } });
+        cur = [];
+      } else {
+        cur.push(pt);
+      }
+    }
+    if (cur.length >= 2) features.push({ type: "Feature", geometry: { type: "LineString", coordinates: cur } });
+  }
+  return { type: "FeatureCollection", features };
+}
+
+function _pointInRing(lon, lat, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1];
+    const xj = ring[j][0], yj = ring[j][1];
+    if (((yi > lat) !== (yj > lat)) &&
+        (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
 async function addIsraelMask() {
   const border = await fetch("/api/israel-border").then((r) => r.json());
   const polys = border.geometry.type === "Polygon"
     ? [border.geometry.coordinates[0]]
     : border.geometry.coordinates.map((p) => p[0]);
+  state._borderRings = polys;     // cached for point-in-polygon click filter
   const worldRing = [[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]];
   map.addSource("il-mask", { type: "geojson",
     data: { type: "Feature", geometry: { type: "Polygon", coordinates: [worldRing, ...polys] } } });
   map.addLayer({ id: "il-mask-fill", type: "fill", source: "il-mask",
-    paint: { "fill-color": "#0a1424", "fill-opacity": 0.95 } });
-  map.addSource("il-border", { type: "geojson", data: border });
+    paint: { "fill-color": "#0a1424", "fill-opacity": 0.65 } });
+  // Draw the border only along land segments — coastlines are skipped so the
+  // outline doesn't bleed into the Mediterranean / Gulf of Aqaba.
+  const landBorder = landOnlyBorder(polys);
+  map.addSource("il-border", { type: "geojson", data: landBorder });
   map.addLayer({ id: "il-border-glow", type: "line", source: "il-border",
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": "#4d7df0", "line-width": 6, "line-opacity": 0.25, "line-blur": 3 } });
@@ -409,7 +449,15 @@ async function loadRound() {
 }
 
 // ─── Click handler ──────────────────────────────────────────────────────────
+// Hard check: ray-cast against the actual Israel polygon. Fall back to the
+// permissive bbox only if the border hasn't loaded yet (offline / first paint).
 function insideIsrael(lng, lat) {
+  if (state._borderRings && state._borderRings.length) {
+    for (const ring of state._borderRings) {
+      if (_pointInRing(lng, lat, ring)) return true;
+    }
+    return false;
+  }
   return lng >= ISRAEL_CLICK_BBOX.minLng && lng <= ISRAEL_CLICK_BBOX.maxLng
       && lat >= ISRAEL_CLICK_BBOX.minLat && lat <= ISRAEL_CLICK_BBOX.maxLat;
 }
