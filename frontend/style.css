@@ -543,34 +543,76 @@ a.place-name:hover { text-decoration: underline; }
 
 /* ─── Mobile (≤ 480 px) ──────────────────────────────────────────────── */
 @media (max-width: 480px) {
-  .card { padding: 20px 18px; min-width: 0; max-width: 92vw; }
-  .card h1 { font-size: 30px; }
-  .card h2 { font-size: 30px; }
-  #final-score { font-size: 60px; }
+  /* Cards: tighter padding, slightly larger min-tap area on inputs */
+  .card { padding: 18px 16px; min-width: 0; max-width: 94vw; border-radius: 16px; }
+  .card h1 { font-size: 28px; }
+  .card h2 { font-size: 26px; }
+  .card p { font-size: 13px; }
+  .tagline { font-size: 13px; margin: 4px 0 14px; }
+  .flag-icon { width: 60px; margin-bottom: 4px; }
+
+  #final-score { font-size: 58px; margin: 8px 0; }
+  #final-max { font-size: 12px; }
+
+  /* HUD — full-width banner at top so long Hebrew prompts wrap nicely */
   #hud {
-    padding: 10px 14px; top: 8px;
+    padding: 9px 12px; top: 60px;          /* under the topbar */
     left: 8px; right: 8px; transform: none;
     max-width: none; width: auto;
   }
-  #prompt { font-size: 17px; }
-  #round-info { gap: 10px; font-size: 11px; flex-wrap: wrap; }
+  #prompt { font-size: 16px; line-height: 1.3; }
+  #round-info { gap: 8px; font-size: 11px; flex-wrap: wrap; }
+
   .stat-row { grid-template-columns: repeat(2, 1fr); }
-  #topbar { top: 8px; left: 8px; right: 8px; gap: 8px; }
-  /* Hit targets ≥ 44px per WCAG/HIG; touch-action stops the browser from
-     hijacking taps with double-tap-zoom or scroll panning */
+
+  /* Topbar — keep on its own row, give chips room */
+  #topbar { top: 8px; left: 8px; right: 8px; gap: 6px; }
   .tb-btn {
-    padding: 10px 12px; min-width: 44px; min-height: 44px;
-    font-size: 17px; touch-action: manipulation;
+    padding: 8px 10px; min-width: 40px; min-height: 40px;
+    font-size: 16px; touch-action: manipulation;
   }
-  #user-chip { padding: 6px 12px; font-size: 13px; gap: 8px; }
-  #user-chip button { padding: 6px; min-width: 34px; }
+  #toolbar { padding: 4px; gap: 4px; }
+  #user-chip { padding: 4px 10px; font-size: 12px; gap: 6px; max-width: 60vw; }
+  #user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #user-chip button { padding: 6px 8px; min-width: 36px; font-size: 12px; }
+
   #emoji-strip { font-size: 22px; letter-spacing: 2px; word-spacing: 4px; }
-  #end-actions { flex-direction: column; }
+  #end-actions { flex-direction: column; gap: 8px; }
   #end-actions button { width: 100%; }
   button { touch-action: manipulation; }
-  /* Reveal corner card stretched at the bottom, no min-width clamp */
-  #reveal-card h2 { font-size: 28px; }
+
+  /* Marker dot bigger so the tap target is unambiguous on a finger */
+  .marker-dot { width: 26px; height: 26px; margin-left: -13px; margin-top: -13px; }
+  .marker-pulse { width: 26px; height: 26px; margin-left: -13px; margin-top: -13px; }
+  .comet-head { width: 16px; height: 16px; margin-left: -8px; margin-top: -8px; }
+
+  /* Reveal stats card collapses to a full-width strip */
+  #reveal-card h2 { font-size: 26px; }
   #reveal-card #btn-next { padding: 12px; font-size: 15px; }
+  #reveal-card { padding: 14px 16px; }
+  #reveal-desc { font-size: 11px; max-height: 3.5em; }
+
+  /* Multiplier rows: shrink padding, ensure full text visible */
+  .mult-legend { gap: 6px; margin: 14px auto 6px; max-width: 100%; }
+  .mult-row { padding: 8px 12px; gap: 10px; font-size: 13px; }
+  .mult-bubble { font-size: 12px; padding: 3px 9px; min-width: 38px; }
+  .mult-ico { width: 18px; height: 18px; }
+
+  /* End-card places gallery: single column with bigger thumb on phones */
+  #end-card { max-width: 94vw; }
+  #places-list {
+    grid-template-columns: 1fr;
+    max-height: 38vh;
+  }
+  .place-img { width: 64px; height: 64px; }
+  .place-name { font-size: 14px; }
+  .place-desc { font-size: 11px; -webkit-line-clamp: 2; }
+}
+
+/* Allow vertical scrolling inside the end card on small heights */
+@media (max-height: 720px) {
+  #end-card { max-height: 92vh; overflow-y: auto; }
+  #places-list { max-height: 32vh; }
 }
 
 /* MapLibre canvas should accept fast pinch/pan but not browser zoom delay */

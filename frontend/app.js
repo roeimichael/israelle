@@ -551,13 +551,14 @@ function animateLine(from, to, durationMs) {
 function popMarker(marker, big = false) {
   const el = marker.getElement().querySelector(".marker-dot");
   if (!el) return;
-  // Set starting state inline so anime reads it; fallback is visible at scale 1.
-  el.style.transform = "scale(0)";
+  // Start at ~60% scale (clearly visible on tap) and overshoot via outBack —
+  // outElastic was slow at the start which read as "did my tap register?".
+  el.style.transform = "scale(0.6)";
   if (!window.anime) { el.style.transform = "scale(1)"; return; }
   anime.animate(el, {
-    scale: 1,
-    duration: 720,
-    ease: big ? "outBack(2.4)" : "outElastic(1, .5)",
+    scale: big ? [1.3, 1] : [1.2, 1],
+    duration: 340,
+    ease: "outBack(2)",
   });
   const pulseEl = marker.getElement().querySelector(".marker-pulse");
   if (pulseEl) {
@@ -566,9 +567,9 @@ function popMarker(marker, big = false) {
     anime.animate(pulseEl, {
       scale: 3,
       opacity: 0,
-      duration: 1100,
+      duration: 900,
       ease: "outCubic",
-      loop: 2,
+      loop: big ? 1 : 3,           // guess pulses longer (covers fetch wait)
     });
   }
 }
