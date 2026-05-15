@@ -9,7 +9,13 @@
       "source": "/api/:path*",
       "destination": "https://israele-production.up.railway.app/api/:path*"
     },
-    { "source": "/static/:path*", "destination": "/:path*" }
+    {
+      "source": "/sitemap.xml",
+      "destination": "https://israele-production.up.railway.app/sitemap.xml"
+    },
+    { "source": "/static/:path*", "destination": "/:path*" },
+    { "source": "/privacy", "destination": "/privacy.html" },
+    { "source": "/terms", "destination": "/terms.html" }
   ],
   "headers": [
     {
@@ -22,6 +28,14 @@
     },
     {
       "source": "/docs/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
+    },
+    {
+      "source": "/sitemap.xml",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }]
+    },
+    {
+      "source": "/robots.txt",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=86400" }]
     }
   ]

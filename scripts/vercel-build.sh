@@ -5,5 +5,10 @@ cp frontend/index.html public/index.html
 cp frontend/app.js public/app.js
 cp frontend/style.css public/style.css
 cp frontend/manifest.json public/manifest.json
+cp frontend/privacy.html public/privacy.html
+cp frontend/terms.html public/terms.html
+cp frontend/robots.txt public/robots.txt
 cp docs/flag.png public/docs/flag.png
 cp docs/homepage.png public/docs/homepage.png
+# Optional horizontal share card. Falls back to homepage.png in meta tags if missing.
+if [ -f docs/share.png ]; then cp docs/share.png public/docs/share.png; fi

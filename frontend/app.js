@@ -1,3 +1,246 @@
+// ─── i18n ──────────────────────────────────────────────────────────────────
+const STRINGS = {
+  he: {
+    site_title: "IsraelE — פאזל יומי של מקומות בישראל",
+    site_desc: "פאזל יומי בסגנון וורדל לישראל. 6 מקומות. נקודה אחת על המפה. כמה אתם מכירים את הארץ?",
+    splash_loading: "טוען",
+    tagline: "כמה טוב אתם מכירים את ישראל?",
+    tagline_sub: "6 מקומות חדשים בכל יום, אותו סט לכולם.",
+    legend_cities: "2 ערים",
+    legend_settlements: "2 יישובים",
+    legend_landmarks: "2 אתרים",
+    game_total_hint_pre: "עד",
+    game_total_hint_post: "נקודות",
+    btn_signin_google: "התחברות עם Google",
+    or_divider: "או",
+    btn_play_guest: "התחל כאורח",
+    btn_play: "התחל",
+    guest_hint: "משחק כאורח לא ישמור היסטוריה ארוכת-טווח.",
+    next_puzzle_in: "פאזל הבא בעוד",
+    name_prompt: "מה השם שלכם?",
+    name_subtitle: "יוצג בלוח התוצאות.",
+    name_placeholder: "ישראל ישראלי",
+    btn_save: "שמור",
+    btn_signout: "התנתק",
+    end_title: "סיום משחק",
+    final_max: "מתוך 1000",
+    btn_share: "📋 העתק תוצאה",
+    btn_leaderboard: "🏆 לוח יומי",
+    places_title: "המקומות של היום",
+    btn_fresh_guest: "↺ התחל מחדש כאורח חדש",
+    history_title: "היסטוריה",
+    btn_close: "סגור",
+    lb_title: "לוח יומי",
+    stats_title: "סטטיסטיקות",
+    stats_games: "משחקים",
+    stats_streak: "רצף נוכחי",
+    stats_max: "רצף שיא",
+    stats_avg: "ממוצע",
+    histogram_title: "פיזור ניקוד",
+    howto_title: "איך משחקים?",
+    howto_p1: "בכל סבב יופיע שם של מקום בישראל. <b>לחצו על המפה</b> איפה לדעתכם הוא נמצא.",
+    howto_scoring_title: "ניקוד",
+    howto_scoring_p: "ככל שלחצתם <b>קרוב יותר</b>, יותר נקודות. עד 250 לסבב בודד, עד <b>1000</b> בכל יום.",
+    howto_daily_title: "פאזל יומי",
+    howto_daily_p1: "כולם משחקים את אותם 6 מקומות. הפאזל מתחלף ב-<b>00:00</b> שעון ישראל.",
+    howto_daily_p2: "אפשר לשתף את התוצאה כמו בוורדל ולהשוות לחברים.",
+    howto_back: "חזור",
+    howto_next: "הבא",
+    howto_start: "התחל",
+    howto_skip: "דלגו ←",
+    btn_stats_tooltip: "סטטיסטיקות",
+    btn_sound_tooltip: "צליל",
+    btn_history_tooltip: "היסטוריה",
+    btn_signout_tooltip: "התנתק מהחשבון",
+    btn_help_tooltip: "איך משחקים",
+    prompt_where: "איפה",
+    where_q: "?",
+    round_n_of: "סבב {n} / 6",
+    score_label: "ניקוד",
+    km_from_you: "ק״מ ממך",
+    btn_summary: "סיכום",
+    btn_next: "הבא ←",
+    click_inside_israel: "לחצו בתוך ישראל",
+    score_save_fail: "שגיאה בשמירת הניקוד",
+    puzzle_load_fail: "נכשלה טעינת הפאזל. נסו שוב.",
+    stats_load_fail: "טעינת סטטיסטיקות נכשלה",
+    sign_in_for_history: "התחברו כדי לראות היסטוריה",
+    supabase_not_configured: "חיבור Supabase לא הוגדר",
+    confirm_fresh_guest: "יישחק לך פאזל חדש כאורח. ההיסטוריה המקומית תאופס. להמשיך?",
+    share_intro: "בואו נראה כמה אתם מכירים את ישראל",
+    share_final: "ניקוד סופי",
+    copied: "הועתק ללוח",
+    copy_failed: "העתקה נכשלה",
+    sound_on: "צליל: פעיל",
+    sound_off: "צליל: כבוי",
+    no_lb_yet: "אין עדיין תוצאות.",
+    no_games_yet: "עדיין לא שיחקתם.",
+    info_link: "מידע נוסף ↗",
+    archive_banner: "ארכיון: {date}",
+    play_today: "→ לפאזל של היום",
+    link_privacy: "פרטיות",
+    link_terms: "תנאי שימוש",
+    type_city: "עיר", type_village: "יישוב", type_mountain: "הר", type_ruins: "חורבה",
+    type_viewpoint: "תצפית", type_archaeological: "אתר ארכיאולוגי",
+    type_memorial: "אנדרטה", type_attraction: "אתר תיירות", type_museum: "מוזיאון",
+    type_monument: "אנדרטה", type_battlefield: "שדה קרב", type_tomb: "קבר",
+    type_castle: "טירה", type_fort: "מבצר", type_nature_reserve: "שמורת טבע",
+    type_theme_park: "פארק שעשועים", type_city_gate: "שער עיר",
+    type_wayside_shrine: "מקדש דרך", type_christian_site: "אתר נוצרי",
+    type_jewish_site: "אתר יהודי", type_druze_site: "אתר דרוזי",
+    type_religious_site: "אתר דתי",
+    cat_city: "עיר", cat_settlement: "יישוב", cat_landmark: "אתר",
+  },
+  en: {
+    site_title: "IsraelE — Daily Israel Geography Puzzle",
+    site_desc: "Daily Wordle-style geography puzzle for Israel. 6 places, one map, up to 1000 points.",
+    splash_loading: "Loading",
+    tagline: "How well do you know Israel?",
+    tagline_sub: "6 fresh places every day. Same set for everyone.",
+    legend_cities: "2 cities",
+    legend_settlements: "2 settlements",
+    legend_landmarks: "2 landmarks",
+    game_total_hint_pre: "Up to",
+    game_total_hint_post: "points",
+    btn_signin_google: "Sign in with Google",
+    or_divider: "or",
+    btn_play_guest: "Play as guest",
+    btn_play: "Play",
+    guest_hint: "Guest mode doesn't save long-term history.",
+    next_puzzle_in: "Next puzzle in",
+    name_prompt: "What's your name?",
+    name_subtitle: "Shown on the leaderboard.",
+    name_placeholder: "Your name",
+    btn_save: "Save",
+    btn_signout: "Sign out",
+    end_title: "Game over",
+    final_max: "out of 1000",
+    btn_share: "📋 Copy result",
+    btn_leaderboard: "🏆 Daily board",
+    places_title: "Today's places",
+    btn_fresh_guest: "↺ Start fresh as guest",
+    history_title: "History",
+    btn_close: "Close",
+    lb_title: "Daily leaderboard",
+    stats_title: "Stats",
+    stats_games: "games",
+    stats_streak: "current streak",
+    stats_max: "max streak",
+    stats_avg: "average",
+    histogram_title: "Score distribution",
+    howto_title: "How to play",
+    howto_p1: "Each round shows the name of a place in Israel. <b>Click on the map</b> where you think it is.",
+    howto_scoring_title: "Scoring",
+    howto_scoring_p: "The <b>closer</b> your click, the more points. Up to 250 per round, up to <b>1000</b> per day.",
+    howto_daily_title: "Daily puzzle",
+    howto_daily_p1: "Everyone plays the same 6 places. Resets at <b>midnight</b> Israel time.",
+    howto_daily_p2: "Share your result Wordle-style and compare with friends.",
+    howto_back: "Back",
+    howto_next: "Next",
+    howto_start: "Play",
+    howto_skip: "Skip →",
+    btn_stats_tooltip: "Stats",
+    btn_sound_tooltip: "Sound",
+    btn_history_tooltip: "History",
+    btn_signout_tooltip: "Sign out",
+    btn_help_tooltip: "How to play",
+    prompt_where: "Where is",
+    where_q: "?",
+    round_n_of: "Round {n} / 6",
+    score_label: "Score",
+    km_from_you: "km away",
+    btn_summary: "Summary",
+    btn_next: "Next →",
+    click_inside_israel: "Click inside Israel",
+    score_save_fail: "Score save failed",
+    puzzle_load_fail: "Failed to load puzzle. Try again.",
+    stats_load_fail: "Stats load failed",
+    sign_in_for_history: "Sign in to see your history",
+    supabase_not_configured: "Supabase not configured",
+    confirm_fresh_guest: "A fresh guest puzzle will start. Local history will be wiped. Continue?",
+    share_intro: "How well do you know Israel?",
+    share_final: "Final score",
+    copied: "Copied to clipboard",
+    copy_failed: "Copy failed",
+    sound_on: "Sound: on",
+    sound_off: "Sound: off",
+    no_lb_yet: "No results yet.",
+    no_games_yet: "No games yet.",
+    info_link: "Read more ↗",
+    archive_banner: "Archive: {date}",
+    play_today: "→ Play today's puzzle",
+    link_privacy: "Privacy",
+    link_terms: "Terms",
+    type_city: "city", type_village: "village", type_mountain: "mountain", type_ruins: "ruins",
+    type_viewpoint: "viewpoint", type_archaeological: "archaeological site",
+    type_memorial: "memorial", type_attraction: "attraction", type_museum: "museum",
+    type_monument: "monument", type_battlefield: "battlefield", type_tomb: "tomb",
+    type_castle: "castle", type_fort: "fort", type_nature_reserve: "nature reserve",
+    type_theme_park: "theme park", type_city_gate: "city gate",
+    type_wayside_shrine: "wayside shrine", type_christian_site: "christian site",
+    type_jewish_site: "jewish site", type_druze_site: "druze site",
+    type_religious_site: "religious site",
+    cat_city: "city", cat_settlement: "settlement", cat_landmark: "landmark",
+  },
+};
+
+function _pickLang() {
+  const urlLang = new URLSearchParams(location.search).get("lang");
+  if (urlLang === "he" || urlLang === "en") return urlLang;
+  const saved = localStorage.getItem("israelle_lang");
+  if (saved === "he" || saved === "en") return saved;
+  return navigator.language?.startsWith("he") ? "he" : "en";
+}
+let LANG = _pickLang();
+
+function T(key, vars) {
+  let s = STRINGS[LANG]?.[key] ?? STRINGS.en[key] ?? key;
+  if (vars) for (const k in vars) s = s.replace(`{${k}}`, vars[k]);
+  return s;
+}
+
+function typeLabel(t) {
+  const key = "type_" + t.replace(/\s+/g, "_").replace("archaeological_site", "archaeological");
+  const v = STRINGS[LANG][key];
+  return v || t;
+}
+function categoryLabel(c) {
+  return STRINGS[LANG]["cat_" + c] || c;
+}
+
+function applyI18n() {
+  document.documentElement.lang = LANG;
+  document.documentElement.dir = LANG === "he" ? "rtl" : "ltr";
+  document.title = T("site_title");
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    const key = el.getAttribute("data-i18n");
+    const attr = el.getAttribute("data-i18n-attr");
+    if (attr) {
+      el.setAttribute(attr, T(key));
+    } else if (!el.hasAttribute("data-i18n-html")) {
+      el.textContent = T(key);
+    }
+  });
+  document.querySelectorAll("[data-i18n-text]").forEach((el) => {
+    el.textContent = T(el.getAttribute("data-i18n-text"));
+  });
+  document.querySelectorAll("[data-i18n-html]").forEach((el) => {
+    el.innerHTML = T(el.getAttribute("data-i18n-html"));
+  });
+  const btn = document.getElementById("btn-lang");
+  if (btn) btn.textContent = LANG === "he" ? "EN" : "עב";
+}
+
+function toggleLang() {
+  LANG = LANG === "he" ? "en" : "he";
+  localStorage.setItem("israelle_lang", LANG);
+  applyI18n();
+  // Re-render any dynamic strings on screen
+  repaintDynamic();
+  // Start/signin card buttons depend on session+lang
+  try { renderUserChip(); } catch {}
+}
+
 // ─── Constants ──────────────────────────────────────────────────────────────
 const ISRAEL_CENTER = [34.95, 31.5];
 const ISRAEL_CLICK_BBOX = { minLng: 34.0, maxLng: 35.95, minLat: 29.3, maxLat: 33.4 };
@@ -16,18 +259,6 @@ const SAT_STYLE = {
   layers: [{ id: "esri_sat", type: "raster", source: "esri_sat" }],
 };
 
-const TYPE_HE = {
-  city: "עיר", village: "יישוב", mountain: "הר", ruins: "חורבה",
-  viewpoint: "תצפית", "archaeological site": "אתר ארכיאולוגי",
-  memorial: "אנדרטה", attraction: "אתר תיירות", museum: "מוזיאון",
-  monument: "אנדרטה", battlefield: "שדה קרב", tomb: "קבר",
-  castle: "טירה", fort: "מבצר", "nature reserve": "שמורת טבע",
-  "theme park": "פארק שעשועים", "city gate": "שער עיר",
-  "wayside shrine": "מקדש דרך", "christian site": "אתר נוצרי",
-  "jewish site": "אתר יהודי", "druze site": "אתר דרוזי",
-  "religious site": "אתר דתי",
-};
-const CATEGORY_HE = { city: "עיר", settlement: "יישוב", landmark: "אתר" };
 const multClass = (m) => (m === 1 ? "m1" : m === 1.5 ? "m2" : "m3");
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -52,7 +283,52 @@ const state = {
   // Per-round truth coords decoded client-side from /api/today.tile_hash,
   // used to start the reveal animation before /api/today/guess returns.
   _idx: null,
+  // Archive mode: when ?date=YYYY-MM-DD set, play a past day stateless (no save).
+  archive: null,
 };
+
+// Pull ?date= from URL once; null on the live daily puzzle.
+function _readArchiveDate() {
+  const d = new URLSearchParams(location.search).get("date");
+  if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return null;
+  return d;
+}
+
+function _isArchive() { return !!state.archive; }
+function _puzzleUrl() { return state.archive ? `/api/puzzle/${state.archive}` : "/api/today"; }
+function _guessUrl() { return state.archive ? `/api/puzzle/${state.archive}/guess` : "/api/today/guess"; }
+
+function repaintDynamic() {
+  // Called after lang toggle. Re-render anything not handled by applyI18n.
+  if (state.rounds.length && state.cursor < state.rounds.length && state.awaitingClick) {
+    const r = state.rounds[state.cursor];
+    document.getElementById("place-name-he").textContent = LANG === "he" ? r.name_he : (r.name_en || r.name_he);
+    document.getElementById("place-type").textContent =
+      `${typeLabel(r.type)} · ${categoryLabel(r.category)}`;
+    document.getElementById("round-num").textContent = T("round_n_of", { n: state.cursor + 1 });
+    document.getElementById("round-score").textContent = `${T("score_label")}: ${state.totalScore}`;
+  }
+  // Re-render reveal place name if visible
+  const revPlace = document.getElementById("reveal-place");
+  if (revPlace && !document.getElementById("reveal-card").classList.contains("hidden")) {
+    const r = state.rounds[state.cursor];
+    if (r) revPlace.textContent = LANG === "he" ? r.name_he : (r.name_en || r.name_he);
+  }
+  // Re-render archive banner text
+  if (state.archive) {
+    const tEl = document.getElementById("archive-banner-text");
+    if (tEl) tEl.textContent = T("archive_banner", { date: state.archive });
+  }
+  // Re-render howto next button
+  if (typeof state._howtoIdx === "number") {
+    const nextBtn = document.getElementById("btn-howto-next");
+    if (nextBtn) nextBtn.textContent = state._howtoIdx === 2 ? T("howto_start") : T("howto_next");
+  }
+  // Re-render places list (if on end-card)
+  if (state.played.length && !document.getElementById("end-card").classList.contains("hidden")) {
+    renderPlacesList();
+  }
+}
 
 // Israel-themed score emojis (5 buckets, best → worst):
 // flag, star of david, dove (peace), camel (desert grind), cactus (סבר/ouch)
@@ -63,6 +339,15 @@ const _splashStart = performance.now();
 const MIN_SPLASH_MS = 900; // long enough to read the wordmark, short enough not to annoy
 
 async function init() {
+  // Apply language + direction before anything visible renders.
+  applyI18n();
+  // Detect archive mode early so loadTodayIntoState routes correctly.
+  state.archive = _readArchiveDate();
+  if (state.archive) {
+    document.getElementById("archive-banner").classList.remove("hidden");
+    document.getElementById("archive-banner-text").textContent = T("archive_banner", { date: state.archive });
+  }
+
   // load config + supabase
   const cfg = await fetch("/api/config").then((r) => r.json());
   if (cfg.supabase_url && cfg.supabase_key) {
@@ -136,6 +421,7 @@ async function init() {
   document.getElementById("btn-stats").onclick = openStats;
   document.getElementById("btn-stats-close").onclick = closeModal;
   document.getElementById("btn-sound").onclick = toggleSound;
+  document.getElementById("btn-lang").onclick = toggleLang;
   document.getElementById("btn-howto-next").onclick = () => moveHowto(+1);
   document.getElementById("btn-howto-prev").onclick = () => moveHowto(-1);
   document.getElementById("btn-howto-skip").onclick = skipHowto;
@@ -176,7 +462,7 @@ setTimeout(() => {
 
 async function loadTodayIntoState() {
   try {
-    const t = await fetchJSON("/api/today");
+    const t = await fetchJSON(_puzzleUrl());
     state.dayNumber = t.day_number;
     state.date = t.date;
     state.rounds = t.rounds;
@@ -191,10 +477,18 @@ async function loadTodayIntoState() {
         console.warn("[ils] paint index failed:", e);
       }
     } else {
-      console.warn("[ils] /api/today missing tile_hash");
+      console.warn("[ils] puzzle missing tile_hash");
     }
     const tag = document.getElementById("day-num-start");
     if (tag) tag.textContent = `#${t.day_number}`;
+
+    // Archive mode: skip the "have I played today" lookup — past days are
+    // stateless replay. Always start fresh.
+    if (state.archive) {
+      state.played = [];
+      state.totalScore = 0;
+      return false;
+    }
 
     // Prefer auth identity when signed in: the canonical player_id may differ
     // from whatever's in localStorage (e.g. user signed out, played as guest,
@@ -234,7 +528,7 @@ async function loadTodayIntoState() {
       return true;
     }
   } catch (e) {
-    console.warn("today load failed", e);
+    console.warn("puzzle load failed", e);
   }
   return false;
 }
@@ -280,7 +574,7 @@ function renderUserChip() {
     signinArea?.classList.add("hidden");
     statsBtn?.classList.remove("hidden");
     if (startBtn) {
-      startBtn.textContent = "התחל";
+      startBtn.textContent = T("btn_play");
       startBtn.classList.remove("btn-secondary");
     }
     guestHint?.classList.add("hidden");
@@ -289,7 +583,7 @@ function renderUserChip() {
     signinArea?.classList.remove("hidden");
     statsBtn?.classList.add("hidden");
     if (startBtn) {
-      startBtn.textContent = "התחל כאורח";
+      startBtn.textContent = T("btn_play_guest");
       startBtn.classList.add("btn-secondary");
     }
     guestHint?.classList.remove("hidden");
@@ -297,7 +591,7 @@ function renderUserChip() {
 }
 
 async function onSignIn() {
-  if (!sb) { flashToast("חיבור Supabase לא הוגדר"); return; }
+  if (!sb) { flashToast(T("supabase_not_configured")); return; }
   await sb.auth.signInWithOAuth({
     provider: "google",
     options: { redirectTo: location.origin },
@@ -317,7 +611,7 @@ function resetToGuest() {
 }
 
 function onFreshGuest() {
-  if (!confirm("יישחק לך פאזל חדש כאורח. ההיסטוריה המקומית תאופס. להמשיך?")) return;
+  if (!confirm(T("confirm_fresh_guest"))) return;
   // If signed in too, sign out first so we don't immediately re-resume the account
   if (sb && session) {
     sb.auth.signOut().finally(resetToGuest);
@@ -366,7 +660,8 @@ async function addIsraelMask() {
 
 // ─── Game flow ──────────────────────────────────────────────────────────────
 async function onStart() {
-  if (!playerName) {
+  // Archive mode: skip the name prompt entirely. Scores aren't saved.
+  if (!state.archive && !playerName) {
     showCard("name-card");
     document.getElementById("name-input").value = "";
     setTimeout(() => document.getElementById("name-input").focus(), 50);
@@ -386,18 +681,28 @@ async function onSaveName() {
 async function beginDay() {
   showSpinner(true);
   try {
-    const [today, me] = await Promise.all([
-      fetchJSON("/api/today"),
-      fetchJSON(`/api/today/me?player_id=${encodeURIComponent(playerId)}`, authHeaders()),
-    ]);
-    state.date = today.date;
-    state.dayNumber = today.day_number;
-    state.rounds = today.rounds;
-    state.played = me.guesses || [];
-    state.totalScore = me.total_score || 0;
-    state.cursor = state.played.length;
+    if (state.archive) {
+      const today = await fetchJSON(_puzzleUrl());
+      state.date = today.date;
+      state.dayNumber = today.day_number;
+      state.rounds = today.rounds;
+      state.played = [];
+      state.totalScore = 0;
+      state.cursor = 0;
+    } else {
+      const [today, me] = await Promise.all([
+        fetchJSON("/api/today"),
+        fetchJSON(`/api/today/me?player_id=${encodeURIComponent(playerId)}`, authHeaders()),
+      ]);
+      state.date = today.date;
+      state.dayNumber = today.day_number;
+      state.rounds = today.rounds;
+      state.played = me.guesses || [];
+      state.totalScore = me.total_score || 0;
+      state.cursor = state.played.length;
+    }
   } catch (e) {
-    flashToast("נכשלה טעינת הפאזל. נסו שוב.");
+    flashToast(T("puzzle_load_fail"));
     showSpinner(false);
     return;
   }
@@ -413,15 +718,15 @@ async function beginDay() {
 
 async function loadRound() {
   const r = state.rounds[state.cursor];
-  document.getElementById("place-name-he").textContent = r.name_he;
+  document.getElementById("place-name-he").textContent = LANG === "he" ? r.name_he : (r.name_en || r.name_he);
   document.getElementById("place-type").textContent =
-    `${TYPE_HE[r.type] || r.type} · ${CATEGORY_HE[r.category] || r.category}`;
+    `${typeLabel(r.type)} · ${categoryLabel(r.category)}`;
   document.getElementById("day-num").textContent = `#${state.dayNumber}`;
-  document.getElementById("round-num").textContent = `סבב ${state.cursor + 1} / 6`;
+  document.getElementById("round-num").textContent = T("round_n_of", { n: state.cursor + 1 });
   const multEl = document.getElementById("round-mult");
   multEl.textContent = `×${r.multiplier}`;
   multEl.className = `mult ${multClass(r.multiplier)}`;
-  document.getElementById("round-score").textContent = `ניקוד: ${state.totalScore}`;
+  document.getElementById("round-score").textContent = `${T("score_label")}: ${state.totalScore}`;
   document.getElementById("hud").classList.remove("hidden");
   state.awaitingClick = true;
 }
@@ -444,7 +749,7 @@ async function onMapClick(e) {
   if (!state.awaitingClick) return;
   const { lng, lat } = e.lngLat;
   if (!insideIsrael(lng, lat)) {
-    flashToast("לחצו בתוך ישראל");
+    flashToast(T("click_inside_israel"));
     return;
   }
   state.awaitingClick = false;
@@ -458,16 +763,14 @@ async function onMapClick(e) {
   // Kick off the score request in the background. Don't await yet — start
   // the reveal animation in parallel using the locally-known truth coords.
   const headers = { "Content-Type": "application/json" };
-  if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
-  const fetchP = fetch("/api/today/guess", {
+  if (!state.archive && session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+  const body = state.archive
+    ? { player_id: playerId, round_idx: state.cursor, lat, lon: lng }
+    : { player_id: playerId, name: playerName, round_idx: state.cursor, lat, lon: lng };
+  const fetchP = fetch(_guessUrl(), {
     method: "POST",
     headers,
-    body: JSON.stringify({
-      player_id: playerId,
-      name: playerName,
-      round_idx: state.cursor,
-      lat, lon: lng,
-    }),
+    body: JSON.stringify(body),
   }).then((r) => r.json()).catch((err) => ({ _err: err }));
 
   const localTruth = state._idx?.[state.cursor];   // [lat, lon] or undefined
@@ -491,12 +794,16 @@ async function onMapClick(e) {
 
   const res = await fetchP;
   if (res._err || res.detail) {
-    flashToast(res.detail || "שגיאה בשמירת הניקוד");
+    flashToast(res.detail || T("score_save_fail"));
     return;
   }
 
+  // Archive: track score locally (no game_id, no total from server).
+  if (state.archive) {
+    res.total_score = (state.totalScore || 0) + res.round_score;
+  }
   state.totalScore = res.total_score;
-  state.played.push({ ...res, name_he: state.rounds[state.cursor].name_he });
+  state.played.push({ ...res, name_he: state.rounds[state.cursor].name_he, name_en: state.rounds[state.cursor].name_en });
 
   // If we didn't have local truth (no idx, e.g. first boot before hydrate),
   // run the full reveal sequence now that we have the server data.
@@ -670,8 +977,9 @@ function showReveal(res) {
   document.getElementById("reveal-score").textContent = `+${res.round_score}`;
   document.getElementById("reveal-breakdown").textContent =
     `${res.base_score} × ${res.multiplier}`;
+  const r = state.rounds[state.cursor];
   document.getElementById("reveal-place").textContent =
-    state.rounds[state.cursor].name_he;
+    LANG === "he" ? r.name_he : (r.name_en || r.name_he);
   const descEl = document.getElementById("reveal-desc");
   descEl.textContent = res.description || "";
   descEl.classList.toggle("hidden", !res.description);
@@ -682,8 +990,8 @@ function showReveal(res) {
   } else {
     srcEl.classList.add("hidden");
   }
-  document.getElementById("reveal-dist").textContent = `${res.distance_km} ק״מ ממך`;
-  document.getElementById("btn-next").textContent = res.is_last ? "סיכום" : "הבא ←";
+  document.getElementById("reveal-dist").textContent = `${res.distance_km} ${T("km_from_you")}`;
+  document.getElementById("btn-next").textContent = res.is_last ? T("btn_summary") : T("btn_next");
   showCard("reveal-card", true);
   state._lastWasFinal = res.is_last;
 }
@@ -718,15 +1026,16 @@ function renderPlacesList() {
   const anyEnriched = sorted.some((g) => g.description || g.image_url);
   title.classList.toggle("hidden", !anyEnriched);
   list.innerHTML = sorted.map((g) => {
+    const nm = LANG === "he" ? (g.name_he || g.name_en) : (g.name_en || g.name_he);
     const img = g.image_url
-      ? `<img src="${escapeHtml(g.image_url)}" alt="${escapeHtml(g.name_he || "")}" loading="lazy" referrerpolicy="no-referrer"/>`
+      ? `<img src="${escapeHtml(g.image_url)}" alt="${escapeHtml(nm || "")}" loading="lazy" referrerpolicy="no-referrer"/>`
       : `<div class="no-image">🗺️</div>`;
     const desc = g.description
       ? `<div class="place-desc">${escapeHtml(g.description)}</div>`
       : "";
     const name = g.source_url
-      ? `<a class="place-name" href="${escapeHtml(g.source_url)}" target="_blank" rel="noopener">${escapeHtml(g.name_he || "")} ↗</a>`
-      : `<div class="place-name">${escapeHtml(g.name_he || "")}</div>`;
+      ? `<a class="place-name" href="${escapeHtml(g.source_url)}" target="_blank" rel="noopener">${escapeHtml(nm || "")} ↗</a>`
+      : `<div class="place-name">${escapeHtml(nm || "")}</div>`;
     return `
       <div class="place-tile">
         <div class="place-img">${img}</div>
@@ -775,10 +1084,10 @@ function buildShareText() {
     .map((g) => `${g.base_score}${scoreEmoji(g.base_score / 100)}`)
     .join(" ");
   return (
-    `בואו נראה כמה אתם מכירים את ישראל ${location.origin}\n` +
+    `${T("share_intro")} ${location.origin}\n` +
     `\n` +
     `${line}\n` +
-    `ניקוד סופי: ${state.totalScore}/1000`
+    `${T("share_final")}: ${state.totalScore}/1000`
   );
 }
 
@@ -790,14 +1099,14 @@ async function onShare() {
       return;
     }
     await navigator.clipboard.writeText(txt);
-    flashToast("הועתק ללוח", "ok");
+    flashToast(T("copied"), "ok");
   } catch (e) {
     if (e?.name === "AbortError") return; // user cancelled native share
     try {
       await navigator.clipboard.writeText(txt);
-      flashToast("הועתק ללוח", "ok");
+      flashToast(T("copied"), "ok");
     } catch {
-      flashToast("העתקה נכשלה");
+      flashToast(T("copy_failed"));
     }
   }
 }
@@ -807,19 +1116,19 @@ async function openLeaderboard() {
   const list = document.getElementById("lb-list");
   list.innerHTML = lb.top.length
     ? lb.top.map((row, i) => `<div class="lb-row"><span>#${i + 1}</span><span>${escapeHtml(row.name)}</span><b>${row.score}</b></div>`).join("")
-    : "<p>אין עדיין תוצאות.</p>";
+    : `<p>${T("no_lb_yet")}</p>`;
   openModal("lb-card");
 }
 
 async function openHistory() {
-  if (!session) { flashToast("התחברו כדי לראות היסטוריה"); return; }
+  if (!session) { flashToast(T("sign_in_for_history")); return; }
   const h = await fetch("/api/me/history", {
     headers: { Authorization: `Bearer ${session.access_token}` },
   }).then((r) => r.json());
   const list = document.getElementById("history-list");
   list.innerHTML = h.games && h.games.length
-    ? h.games.map((g) => `<div class="hist-row"><span>${g.puzzle_date}</span><b>${g.total_score}</b></div>`).join("")
-    : "<p>עדיין לא שיחקתם.</p>";
+    ? h.games.map((g) => `<div class="hist-row"><a href="/?date=${escapeHtml(g.puzzle_date)}">${escapeHtml(g.puzzle_date)}</a><b>${g.total_score}</b></div>`).join("")
+    : `<p>${T("no_games_yet")}</p>`;
   openModal("history-card");
 }
 
@@ -933,7 +1242,7 @@ async function openStats() {
   try {
     s = await fetchJSON(`/api/me/stats?player_id=${encodeURIComponent(playerId)}`, authHeaders());
   } catch {
-    flashToast("טעינת סטטיסטיקות נכשלה");
+    flashToast(T("stats_load_fail"));
     showSpinner(false);
     return;
   }
@@ -979,7 +1288,7 @@ function paintHowto() {
   const slides = document.querySelectorAll(".howto-slide");
   slides.forEach((s) => s.classList.toggle("hidden", Number(s.dataset.i) !== state._howtoIdx));
   document.getElementById("btn-howto-prev").classList.toggle("hidden", state._howtoIdx === 0);
-  document.getElementById("btn-howto-next").textContent = state._howtoIdx === 2 ? "התחל" : "הבא";
+  document.getElementById("btn-howto-next").textContent = state._howtoIdx === 2 ? T("howto_start") : T("howto_next");
   const dots = document.getElementById("howto-dots");
   dots.innerHTML = [0, 1, 2].map((i) => `<span class="dot${i === state._howtoIdx ? " on" : ""}"></span>`).join("");
 }
@@ -993,7 +1302,7 @@ function toggleSound() {
   if (soundOn) chime(800);
 }
 function toggleSoundToast() {
-  flashToast(`צליל: ${soundOn ? "פעיל" : "כבוי"}`, "ok");
+  flashToast(soundOn ? T("sound_on") : T("sound_off"), "ok");
 }
 function applyToggleVisuals() {
   const s = document.getElementById("btn-sound");

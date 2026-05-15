@@ -625,3 +625,32 @@ a.place-name:hover { text-decoration: underline; }
 /* MapLibre canvas should accept fast pinch/pan but not browser zoom delay */
 .maplibregl-map, .maplibregl-canvas { touch-action: pan-x pan-y pinch-zoom; }
 .maplibregl-ctrl-attrib { font-size: 10px; opacity: 0.55; }
+
+/* ─── Archive banner (when viewing past day) ─── */
+#archive-banner {
+  position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+  z-index: 12;
+  background: rgba(245, 158, 11, 0.95);
+  color: #1a1300;
+  padding: 6px 14px; border-radius: 20px;
+  font-size: 13px; font-weight: 600;
+  display: flex; gap: 10px; align-items: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+#archive-banner a { color: #1a1300; text-decoration: underline; font-weight: 700; }
+
+/* ─── Footer links on start card ─── */
+.footer-links {
+  margin-top: 14px; font-size: 12px; opacity: 0.65;
+  display: flex; gap: 8px; justify-content: center;
+}
+.footer-links a { color: var(--text-dim); text-decoration: none; }
+.footer-links a:hover { color: var(--il-blue-light); text-decoration: underline; }
+.footer-links .sep { opacity: 0.5; }
+
+.end-meta { margin-top: 14px; text-align: center; }
+
+/* ─── EN/LTR overrides ─── */
+html[dir="ltr"] #archive-banner a::before { content: ""; }
+html[dir="ltr"] #place-name-he { unicode-bidi: plaintext; }
+html[lang="en"] .magen-david { /* keep */ }

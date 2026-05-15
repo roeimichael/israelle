@@ -104,6 +104,14 @@ def _require_player_access(player_id: str, request: Request) -> None:
         raise HTTPException(403, "not your data")
 
 
+class GuessIn(BaseModel):
+    player_id: str
+    name: str | None = None
+    round_idx: int
+    lat: float
+    lon: float
+
+
 def _tile_hash(d: str, coords: list[tuple[float, float]]) -> str:
     """Pack today's six (lat, lon) pairs into an obfuscated string the client
     can recover synchronously, so the reveal animation can start the instant
@@ -126,9 +134,7 @@ def israel_border():
 # ─── daily puzzle ────────────────────────────────────────────────────────────
 
 
-@app.get("/api/today")
-def today():
-    d = _il_today_iso()
+def _build_puzzle(d: str) -> dict:
     place_ids = _daily_picks(d)
     rounds = []
     coords: list[tuple[float, float]] = []
@@ -139,6 +145,7 @@ def today():
         rounds.append({
             "round_idx": ix,
             "name_he": p["name_he"],
+            "name_en": p["name_en"],
             "type": p["type"],
             "category": p["category"],
             "multiplier": p["multiplier"],
@@ -149,6 +156,66 @@ def today():
         "day_number": _day_number(d),
         "rounds": rounds,
         "tile_hash": _tile_hash(d, coords),
+    }
+
+
+@app.get("/api/today")
+def today():
+    return _build_puzzle(_il_today_iso())
+
+
+@app.get("/api/puzzle/{d}")
+def puzzle_day(d: str):
+    """Archive: replay any past day. Read-only, no DB writes."""
+    try:
+        target = date.fromisoformat(d)
+    except ValueError:
+        raise HTTPException(400, "bad date format (expected YYYY-MM-DD)")
+    today_d = date.fromisoformat(_il_today_iso())
+    if target >= today_d:
+        raise HTTPException(400, "use /api/today for today's puzzle")
+    if target < EPOCH:
+        raise HTTPException(400, f"archive begins {EPOCH.isoformat()}")
+    return _build_puzzle(d)
+
+
+@app.post("/api/puzzle/{d}/guess")
+def puzzle_guess(d: str, body: GuessIn):
+    """Stateless score for an archive guess. No leaderboard, no persistence."""
+    try:
+        target = date.fromisoformat(d)
+    except ValueError:
+        raise HTTPException(400, "bad date")
+    today_d = date.fromisoformat(_il_today_iso())
+    if target >= today_d:
+        raise HTTPException(400, "use /api/today/guess")
+    if target < EPOCH:
+        raise HTTPException(400, "before epoch")
+    if not (0 <= body.round_idx < 6):
+        raise HTTPException(400, "bad round_idx")
+    place_ids = _daily_picks(d)
+    place_id = place_ids[body.round_idx]
+    p = places.get(place_id)
+    if not p:
+        raise HTTPException(500, "place missing")
+    dist = haversine_km(body.lat, body.lon, p["lat"], p["lon"])
+    base = base_score(dist)
+    return {
+        "distance_km": round(dist, 2),
+        "base_score": base,
+        "multiplier": p["multiplier"],
+        "round_score": round(base * p["multiplier"]),
+        "true_lat": p["lat"],
+        "true_lon": p["lon"],
+        "polygon": places.get_polygon(place_id),
+        "round_idx": body.round_idx,
+        "is_last": body.round_idx == 5,
+        "name_he": p["name_he"],
+        "name_en": p["name_en"],
+        "description": p.get("description", ""),
+        "image_url": p.get("image_url", ""),
+        "source_url": p.get("source_url", ""),
+        "archive": True,
     }
 
 
@@ -205,6 +272,7 @@ def me_today(request: Request, hint: str | None = None):
         p = places.get(int(gs["place_id"]))
         if p:
             gs["name_he"] = p["name_he"]
+            gs["name_en"] = p["name_en"]
             gs["type"] = p["type"]
             gs["category"] = p["category"]
             gs["multiplier"] = p["multiplier"]
@@ -248,6 +316,7 @@ def today_me(player_id: str, request: Request):
         p = places.get(int(gs["place_id"]))
         if p:
             gs["name_he"] = p["name_he"]
+            gs["name_en"] = p["name_en"]
             gs["type"] = p["type"]
             gs["category"] = p["category"]
             gs["multiplier"] = p["multiplier"]
@@ -264,13 +333,6 @@ def today_me(player_id: str, request: Request):
         "done": len(guesses) >= 6,
     }
 
-
-class GuessIn(BaseModel):
-    player_id: str
-    name: str | None = None
-    round_idx: int
-    lat: float
-    lon: float
 
 
 @app.post("/api/today/guess")
@@ -363,6 +425,8 @@ def today_guess(body: GuessIn, request: Request):
         "round_idx": body.round_idx,
         "is_last": body.round_idx == 5,
         "game_id": game_id,
+        "name_he": p["name_he"],
+        "name_en": p["name_en"],
         "description": p.get("description", ""),
         "image_url": p.get("image_url", ""),
         "source_url": p.get("source_url", ""),
@@ -472,6 +536,33 @@ def leaderboard(date: str | None = None):
         for r in rows
     ]
     return {"date": date, "top": out}
+
+
+# ─── SEO: dynamic sitemap with all archive days ──────────────────────────────
+
+
+@app.get("/sitemap.xml")
+def sitemap():
+    from fastapi.responses import Response
+    base = "https://israel-e.com"
+    today_d = date.fromisoformat(_il_today_iso())
+    urls = [
+        f"<url><loc>{base}/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>",
+        f"<url><loc>{base}/privacy</loc><priority>0.3</priority></url>",
+        f"<url><loc>{base}/terms</loc><priority>0.3</priority></url>",
+    ]
+    cur = EPOCH
+    from datetime import timedelta
+    while cur < today_d:
+        urls.append(f"<url><loc>{base}/?date={cur.isoformat()}</loc><priority>0.6</priority></url>")
+        cur += timedelta(days=1)
+    body = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        + "".join(urls) +
+        "</urlset>"
+    )
+    return Response(content=body, media_type="application/xml")
 
 
 # ─── tiny endpoint so frontend can find supabase client params ───────────────

@@ -3,27 +3,63 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>IsraelE — פאזל יומי של מקומות בישראל</title>
-<meta name="description" content="פאזל יומי בסגנון וורדל לישראל. 6 מקומות. נקודה אחת על המפה. כמה אתם מכירים את הארץ?" />
-<meta property="og:title" content="IsraelE — פאזל יומי" />
-<meta property="og:description" content="כל יום 6 מקומות חדשים. סמנו במפה — ככל שיותר קרוב, יותר נקודות. עד 1000 בכל יום." />
-<meta property="og:image" content="/docs/homepage.png" />
+<title data-i18n="site_title">IsraelE — פאזל יומי של מקומות בישראל</title>
+<meta name="description" data-i18n-attr="content" data-i18n="site_desc" content="פאזל יומי בסגנון וורדל לישראל. 6 מקומות. נקודה אחת על המפה. כמה אתם מכירים את הארץ?" />
+<link rel="canonical" href="https://israel-e.com/" />
+
+<!-- Open Graph -->
 <meta property="og:type" content="website" />
+<meta property="og:url" content="https://israel-e.com/" />
+<meta property="og:title" data-i18n-attr="content" data-i18n="site_title" content="IsraelE — פאזל יומי" />
+<meta property="og:description" data-i18n-attr="content" data-i18n="site_desc" content="כל יום 6 מקומות חדשים. סמנו במפה — ככל שיותר קרוב, יותר נקודות. עד 1000 בכל יום." />
+<meta property="og:image" content="https://israel-e.com/docs/homepage.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:locale" content="he_IL" />
+<meta property="og:locale:alternate" content="en_US" />
+<meta property="og:site_name" content="IsraelE" />
+
+<!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" data-i18n-attr="content" data-i18n="site_title" content="IsraelE" />
+<meta name="twitter:description" data-i18n-attr="content" data-i18n="site_desc" content="פאזל יומי של מקומות בישראל" />
+<meta name="twitter:image" content="https://israel-e.com/docs/homepage.png" />
+
+<!-- hreflang -->
+<link rel="alternate" hreflang="he" href="https://israel-e.com/?lang=he" />
+<link rel="alternate" hreflang="en" href="https://israel-e.com/?lang=en" />
+<link rel="alternate" hreflang="x-default" href="https://israel-e.com/" />
+
 <link rel="icon" type="image/png" href="/docs/flag.png" />
+<link rel="apple-touch-icon" href="/docs/flag.png" />
 <link rel="manifest" href="/static/manifest.json" />
 <meta name="theme-color" content="#0a1424" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<link rel="apple-touch-icon" href="/docs/flag.png" />
+
+<!-- JSON-LD: WebSite + WebApplication for richer Google snippet -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "IsraelE",
+  "url": "https://israel-e.com/",
+  "description": "Daily geography puzzle scoped to Israel.",
+  "applicationCategory": "Game",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "inLanguage": ["he", "en"]
+}
+</script>
+
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-<link href="/static/style.css?v=16" rel="stylesheet" />
+<link href="/static/style.css?v=17" rel="stylesheet" />
 </head>
 <body>
 <!-- splash: covers everything until init resolves -->
 <div id="splash">
-  <svg class="magen-david" viewBox="0 0 100 100" width="96" height="96" aria-label="טוען">
+  <svg class="magen-david" viewBox="0 0 100 100" width="96" height="96" data-i18n-attr="aria-label" data-i18n="splash_loading" aria-label="טוען">
     <defs>
       <linearGradient id="md-grad" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0%" stop-color="#a3c0ff"/>
@@ -42,13 +78,14 @@
 <div id="topbar">
   <div id="user-chip" class="hidden">
     <span id="user-name"></span>
-    <button id="btn-history" title="היסטוריה">📜</button>
-    <button id="btn-signout" title="התנתק מהחשבון">התנתק</button>
+    <button id="btn-history" data-i18n-attr="title" data-i18n="btn_history_tooltip" title="היסטוריה">📜</button>
+    <button id="btn-signout" data-i18n-attr="title" data-i18n="btn_signout_tooltip" data-i18n-text="btn_signout" title="התנתק מהחשבון">התנתק</button>
   </div>
   <div id="toolbar">
-    <button class="tb-btn" id="btn-help" title="איך משחקים">?</button>
-    <button class="tb-btn hidden" id="btn-stats" title="סטטיסטיקות">📊</button>
-    <button class="tb-btn" id="btn-sound" title="צליל">🔊</button>
+    <button class="tb-btn" id="btn-help" data-i18n-attr="title" data-i18n="btn_help_tooltip" title="איך משחקים">?</button>
+    <button class="tb-btn hidden" id="btn-stats" data-i18n-attr="title" data-i18n="btn_stats_tooltip" title="סטטיסטיקות">📊</button>
+    <button class="tb-btn" id="btn-lang" title="עברית / English">EN</button>
+    <button class="tb-btn" id="btn-sound" data-i18n-attr="title" data-i18n="btn_sound_tooltip" title="צליל">🔊</button>
   </div>
 </div>
 
@@ -60,39 +97,50 @@
     <span id="round-score"></span>
   </div>
   <div id="prompt">
-    איפה <span id="place-name-he"></span>?
+    <span data-i18n="prompt_where">איפה</span> <span id="place-name-he"></span><span data-i18n="where_q">?</span>
     <div id="place-type"></div>
   </div>
 </div>
 
 <div id="overlay">
 
+  <!-- archive banner (only when ?date=) -->
+  <div id="archive-banner" class="hidden">
+    <span id="archive-banner-text"></span>
+    <a href="/" id="archive-back" data-i18n="play_today">→ לפאזל של היום</a>
+  </div>
+
   <!-- start card -->
   <div id="start-card" class="card">
-    <img class="flag-icon" src="/docs/flag.png" alt="דגל ישראל" />
+    <img class="flag-icon" src="/docs/flag.png" alt="" />
     <div class="title-row">
       <h1>IsraelE</h1>
       <span id="day-num-start" class="day-tag"></span>
     </div>
-    <p class="tagline">כמה טוב אתם מכירים את ישראל?<br/>6 מקומות חדשים בכל יום, אותו סט לכולם.</p>
+    <p class="tagline">
+      <span data-i18n="tagline">כמה טוב אתם מכירים את ישראל?</span><br/>
+      <span data-i18n="tagline_sub">6 מקומות חדשים בכל יום, אותו סט לכולם.</span>
+    </p>
     <div class="mult-legend">
       <div class="mult-row m1">
         <i data-lucide="building-2" class="mult-ico"></i>
-        <span class="mult-text">2 ערים</span>
+        <span class="mult-text" data-i18n="legend_cities">2 ערים</span>
         <span class="mult-bubble">×1</span>
       </div>
       <div class="mult-row m2">
         <i data-lucide="house" class="mult-ico"></i>
-        <span class="mult-text">2 יישובים</span>
+        <span class="mult-text" data-i18n="legend_settlements">2 יישובים</span>
         <span class="mult-bubble">×1.5</span>
       </div>
       <div class="mult-row m3">
         <i data-lucide="mountain" class="mult-ico"></i>
-        <span class="mult-text">2 אתרים</span>
+        <span class="mult-text" data-i18n="legend_landmarks">2 אתרים</span>
         <span class="mult-bubble">×2.5</span>
       </div>
     </div>
-    <div class="game-total-hint">עד <b>1000</b> נקודות</div>
+    <div class="game-total-hint">
+      <span data-i18n="game_total_hint_pre">עד</span> <b>1000</b> <span data-i18n="game_total_hint_post">נקודות</span>
+    </div>
 
     <div id="signin-area">
       <button id="btn-signin" class="btn-google">
@@ -102,14 +150,19 @@
           <path fill="#FBBC05" d="M3.88 10.78A5.54 5.54 0 0 1 3.58 9c0-.62.11-1.22.29-1.78L.96 4.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.04l2.92-2.26z"/>
           <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.84-2.2c-.76.53-1.78.9-3.12.9-2.38 0-4.4-1.57-5.12-3.74L.97 13.04C2.45 15.98 5.48 18 9 18z"/>
         </svg>
-        <span>התחברות עם Google</span>
+        <span data-i18n="btn_signin_google">התחברות עם Google</span>
       </button>
-      <div class="auth-divider"><span>או</span></div>
+      <div class="auth-divider"><span data-i18n="or_divider">או</span></div>
     </div>
 
-    <button id="btn-start" class="btn-secondary">התחל כאורח</button>
-    <p class="signin-hint">משחק כאורח לא ישמור היסטוריה ארוכת-טווח.</p>
-    <div id="next-puzzle-in" class="countdown hidden">פאזל הבא בעוד <span id="cd"></span></div>
+    <button id="btn-start" class="btn-secondary" data-i18n="btn_play_guest">התחל כאורח</button>
+    <p class="signin-hint" data-i18n="guest_hint">משחק כאורח לא ישמור היסטוריה ארוכת-טווח.</p>
+    <div id="next-puzzle-in" class="countdown hidden"><span data-i18n="next_puzzle_in">פאזל הבא בעוד</span> <span id="cd"></span></div>
+    <div class="footer-links">
+      <a href="/privacy" data-i18n="link_privacy">פרטיות</a>
+      <span class="sep">·</span>
+      <a href="/terms" data-i18n="link_terms">תנאי שימוש</a>
+    </div>
   </div>
 
   <!-- reveal card -->
@@ -118,93 +171,93 @@
     <div id="reveal-breakdown"></div>
     <div id="reveal-place"></div>
     <div id="reveal-desc"></div>
-    <a id="reveal-source" class="reveal-source hidden" target="_blank" rel="noopener">מידע נוסף ↗</a>
+    <a id="reveal-source" class="reveal-source hidden" target="_blank" rel="noopener" data-i18n="info_link">מידע נוסף ↗</a>
     <div id="reveal-dist"></div>
-    <button id="btn-next">הבא ←</button>
+    <button id="btn-next" data-i18n="btn_next">הבא ←</button>
   </div>
 
   <!-- end card -->
   <div id="end-card" class="card hidden">
-    <h1>סיום משחק</h1>
+    <h1 data-i18n="end_title">סיום משחק</h1>
     <div id="final-score"></div>
-    <div id="final-max">מתוך 1000</div>
+    <div id="final-max" data-i18n="final_max">מתוך 1000</div>
     <div id="emoji-strip"></div>
     <div id="end-actions">
-      <button id="btn-share">📋 העתק תוצאה</button>
-      <button id="btn-leaderboard">🏆 לוח יומי</button>
+      <button id="btn-share" data-i18n="btn_share">📋 העתק תוצאה</button>
+      <button id="btn-leaderboard" data-i18n="btn_leaderboard">🏆 לוח יומי</button>
     </div>
-    <div id="next-cd" class="countdown">פאזל הבא בעוד <span id="cd2"></span></div>
-    <h3 id="places-title" class="places-title hidden">המקומות של היום</h3>
+    <div id="next-cd" class="countdown"><span data-i18n="next_puzzle_in">פאזל הבא בעוד</span> <span id="cd2"></span></div>
+    <h3 id="places-title" class="places-title hidden" data-i18n="places_title">המקומות של היום</h3>
     <div id="places-list"></div>
-    <button id="btn-fresh-guest" class="link-btn" title="מנקה היסטוריה ומתחיל מחדש כאורח">
-      ↺ התחל מחדש כאורח חדש
-    </button>
+    <div class="end-meta">
+      <button id="btn-fresh-guest" class="link-btn" data-i18n="btn_fresh_guest">↺ התחל מחדש כאורח חדש</button>
+    </div>
   </div>
 
   <!-- name prompt -->
   <div id="name-card" class="card hidden">
-    <h2>מה השם שלכם?</h2>
-    <p>יוצג בלוח התוצאות.</p>
-    <input id="name-input" maxlength="20" placeholder="ישראל ישראלי" />
-    <button id="btn-name-save">שמור</button>
+    <h2 data-i18n="name_prompt">מה השם שלכם?</h2>
+    <p data-i18n="name_subtitle">יוצג בלוח התוצאות.</p>
+    <input id="name-input" maxlength="20" data-i18n-attr="placeholder" data-i18n="name_placeholder" placeholder="ישראל ישראלי" />
+    <button id="btn-name-save" data-i18n="btn_save">שמור</button>
   </div>
 
   <!-- history modal -->
   <div id="history-card" class="card hidden">
-    <h2>היסטוריה</h2>
+    <h2 data-i18n="history_title">היסטוריה</h2>
     <div id="history-list"></div>
-    <button id="btn-history-close">סגור</button>
+    <button id="btn-history-close" data-i18n="btn_close">סגור</button>
   </div>
 
   <!-- leaderboard modal -->
   <div id="lb-card" class="card hidden">
-    <h2>לוח יומי</h2>
+    <h2 data-i18n="lb_title">לוח יומי</h2>
     <div id="lb-list"></div>
-    <button id="btn-lb-close">סגור</button>
+    <button id="btn-lb-close" data-i18n="btn_close">סגור</button>
   </div>
 
   <!-- stats modal -->
   <div id="stats-card" class="card hidden">
-    <h2>סטטיסטיקות</h2>
+    <h2 data-i18n="stats_title">סטטיסטיקות</h2>
     <div class="stat-row">
-      <div class="stat"><b id="stat-games">0</b><span>משחקים</span></div>
-      <div class="stat"><b id="stat-streak">0</b><span>רצף נוכחי</span></div>
-      <div class="stat"><b id="stat-max">0</b><span>רצף שיא</span></div>
-      <div class="stat"><b id="stat-avg">0</b><span>ממוצע</span></div>
+      <div class="stat"><b id="stat-games">0</b><span data-i18n="stats_games">משחקים</span></div>
+      <div class="stat"><b id="stat-streak">0</b><span data-i18n="stats_streak">רצף נוכחי</span></div>
+      <div class="stat"><b id="stat-max">0</b><span data-i18n="stats_max">רצף שיא</span></div>
+      <div class="stat"><b id="stat-avg">0</b><span data-i18n="stats_avg">ממוצע</span></div>
     </div>
-    <h3 class="hist-title">פיזור ניקוד</h3>
+    <h3 class="hist-title" data-i18n="histogram_title">פיזור ניקוד</h3>
     <div id="histogram"></div>
-    <button id="btn-stats-close">סגור</button>
+    <button id="btn-stats-close" data-i18n="btn_close">סגור</button>
   </div>
 
   <!-- how-to-play modal -->
   <div id="howto-card" class="card hidden">
     <div id="howto-slides">
       <div class="howto-slide" data-i="0">
-        <h2>איך משחקים?</h2>
-        <p>בכל סבב יופיע שם של מקום בישראל. <b>לחצו על המפה</b> איפה לדעתכם הוא נמצא.</p>
+        <h2 data-i18n="howto_title">איך משחקים?</h2>
+        <p data-i18n-html="howto_p1">בכל סבב יופיע שם של מקום בישראל. <b>לחצו על המפה</b> איפה לדעתכם הוא נמצא.</p>
       </div>
       <div class="howto-slide hidden" data-i="1">
-        <h2>ניקוד</h2>
-        <p>ככל שלחצתם <b>קרוב יותר</b>, יותר נקודות. עד 250 לסבב בודד, עד <b>1000</b> בכל יום.</p>
+        <h2 data-i18n="howto_scoring_title">ניקוד</h2>
+        <p data-i18n-html="howto_scoring_p">ככל שלחצתם <b>קרוב יותר</b>, יותר נקודות. עד 250 לסבב בודד, עד <b>1000</b> בכל יום.</p>
         <div class="mult-legend small">
-          <div><span class="m1">×1</span> 2 ערים</div>
-          <div><span class="m2">×1.5</span> 2 יישובים</div>
-          <div><span class="m3">×2.5</span> 2 אתרים</div>
+          <div><span class="m1">×1</span> <span data-i18n="legend_cities">2 ערים</span></div>
+          <div><span class="m2">×1.5</span> <span data-i18n="legend_settlements">2 יישובים</span></div>
+          <div><span class="m3">×2.5</span> <span data-i18n="legend_landmarks">2 אתרים</span></div>
         </div>
       </div>
       <div class="howto-slide hidden" data-i="2">
-        <h2>פאזל יומי</h2>
-        <p>כולם משחקים את אותם 6 מקומות. הפאזל מתחלף ב-<b>00:00</b> שעון ישראל.</p>
-        <p>אפשר לשתף את התוצאה כמו בוורדל ולהשוות לחברים.</p>
+        <h2 data-i18n="howto_daily_title">פאזל יומי</h2>
+        <p data-i18n-html="howto_daily_p1">כולם משחקים את אותם 6 מקומות. הפאזל מתחלף ב-<b>00:00</b> שעון ישראל.</p>
+        <p data-i18n="howto_daily_p2">אפשר לשתף את התוצאה כמו בוורדל ולהשוות לחברים.</p>
       </div>
     </div>
     <div id="howto-nav">
-      <button id="btn-howto-prev" class="ghost">חזור</button>
+      <button id="btn-howto-prev" class="ghost" data-i18n="howto_back">חזור</button>
       <span id="howto-dots"></span>
-      <button id="btn-howto-next">הבא</button>
+      <button id="btn-howto-next" data-i18n="howto_next">הבא</button>
     </div>
-    <button id="btn-howto-skip" class="link-btn">דלגו ←</button>
+    <button id="btn-howto-skip" class="link-btn" data-i18n="howto_skip">דלגו ←</button>
   </div>
 
 </div>
@@ -216,6 +269,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/animejs@4/dist/bundles/anime.umd.min.js"></script>
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
-<script src="/static/app.js?v=29"></script>
+<script src="/static/app.js?v=30"></script>
 </body>
 </html>
