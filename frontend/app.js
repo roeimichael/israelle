@@ -185,11 +185,13 @@ const STRINGS = {
 };
 
 function _pickLang() {
+  // Explicit user choice always wins (URL or previous toggle). Default Hebrew
+  // for everyone else — site is Israel-focused.
   const urlLang = new URLSearchParams(location.search).get("lang");
   if (urlLang === "he" || urlLang === "en") return urlLang;
   const saved = localStorage.getItem("israelle_lang");
   if (saved === "he" || saved === "en") return saved;
-  return navigator.language?.startsWith("he") ? "he" : "en";
+  return "he";
 }
 let LANG = _pickLang();
 

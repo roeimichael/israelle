@@ -391,7 +391,8 @@ a.place-name:hover { text-decoration: underline; }
   border: 1px solid rgba(77, 125, 240, 0.25);
   padding: 6px; border-radius: 14px;
   backdrop-filter: blur(10px);
-  margin-right: auto;  /* in RTL flex this pushes toolbar to visual left */
+  /* Direction-aware push: visual-left in RTL, visual-right in LTR. */
+  margin-inline-start: auto;
 }
 .tb-btn {
   background: transparent; color: var(--text);
