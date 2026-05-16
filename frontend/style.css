@@ -246,11 +246,18 @@ a.place-name:hover { text-decoration: underline; }
   width: 100%; margin-top: 14px; padding: 10px 20px; font-size: 14px;
 }
 @media (max-width: 520px) {
+  /* Pin reveal card to the bottom of the screen, full width, content-tall.
+     `align-items: stretch` was making the card fill the full viewport, which
+     pushed the top behind the topbar (clipping the "+score") and left a giant
+     empty band below the Next button. */
   #overlay:has(#reveal-card:not(.hidden)) {
-    align-items: stretch; justify-content: stretch;
+    align-items: flex-end; justify-content: center;
     padding: 0 12px 12px 12px;
   }
-  #reveal-card { min-width: 0; max-width: none; width: 100%; }
+  #reveal-card {
+    min-width: 0; max-width: none; width: 100%;
+    height: auto;
+  }
 }
 #final-score {
   font-size: 80px; font-weight: 800; margin: 12px 0; letter-spacing: -3px;
