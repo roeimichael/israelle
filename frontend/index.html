@@ -55,7 +55,7 @@
 </script>
 
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-<link href="/static/style.css?v=24" rel="stylesheet" />
+<link href="/static/style.css?v=25" rel="stylesheet" />
 </head>
 <body>
 <!-- splash: covers everything until init resolves -->
@@ -93,14 +93,14 @@
 <div id="hud" class="hidden">
   <div id="round-info">
     <span id="day-num"></span>
-    <span id="round-num"></span>
+    <span id="round-num" class="progress-dots"></span>
     <span id="round-mult"></span>
     <span id="round-score"></span>
   </div>
   <div id="prompt">
     <span data-i18n="prompt_where">איפה</span> <span id="place-name-he"></span><span data-i18n="where_q">?</span>
-    <div id="place-type"></div>
   </div>
+  <div id="place-type" class="place-tag"></div>
 </div>
 
 <div id="overlay">
@@ -301,6 +301,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/animejs@4/dist/bundles/anime.umd.min.js"></script>
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
-<script src="/static/app.js?v=36"></script>
+<script src="/static/app.js?v=37"></script>
 </body>
 </html>

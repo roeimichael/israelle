@@ -238,6 +238,30 @@ function categoryLabel(c) {
   return STRINGS[LANG]["cat_" + c] || c;
 }
 
+// Emoji per place type — used in the in-game tag pill so the user knows
+// what kind of thing they're looking for at a glance (mountain vs tomb vs city).
+const TYPE_ICON = {
+  city: "🏙️", village: "🏡",
+  mountain: "⛰️", ruins: "🏛️",
+  viewpoint: "🔭", "archaeological site": "🏺",
+  memorial: "🕯️", attraction: "🎡",
+  museum: "🏛️", monument: "🗿",
+  battlefield: "⚔️", tomb: "⚰️",
+  castle: "🏰", fort: "🛡️",
+  "nature reserve": "🌲", "theme park": "🎢",
+  "city gate": "🚪", "wayside shrine": "🛤️",
+  "christian site": "✝️", "jewish site": "✡️",
+  "druze site": "🌟", "religious site": "🕌",
+};
+
+function placeTag(r) {
+  // Always show the most specific type (e.g. "אתר ארכיאולוגי" not "אתר").
+  // Multiplier badge already conveys the broad category, so no duplication.
+  const icon = TYPE_ICON[r.type] || "📍";
+  const label = typeLabel(r.type);
+  return { icon, label, klass: multClass(r.multiplier) };
+}
+
 function applyI18n() {
   document.documentElement.lang = LANG;
   document.documentElement.dir = LANG === "he" ? "rtl" : "ltr";
@@ -335,10 +359,11 @@ function repaintDynamic() {
   if (state.rounds.length && state.cursor < state.rounds.length && state.awaitingClick) {
     const r = state.rounds[state.cursor];
     document.getElementById("place-name-he").textContent = LANG === "he" ? r.name_he : (r.name_en || r.name_he);
-    document.getElementById("place-type").textContent =
-      `${typeLabel(r.type)} · ${categoryLabel(r.category)}`;
-    document.getElementById("round-num").textContent = T("round_n_of", { n: state.cursor + 1 });
-    document.getElementById("round-score").textContent = `${T("score_label")}: ${state.totalScore}`;
+    const tag = placeTag(r);
+    const tagEl = document.getElementById("place-type");
+    tagEl.className = `place-tag ${tag.klass}`;
+    tagEl.innerHTML = `<span class="place-tag-icon">${tag.icon}</span><span class="place-tag-label">${escapeHtml(tag.label)}</span>`;
+    document.getElementById("round-score").textContent = state.totalScore;
   }
   // Re-render reveal place name if visible
   const revPlace = document.getElementById("reveal-place");
@@ -766,17 +791,30 @@ async function beginDay() {
 async function loadRound() {
   const r = state.rounds[state.cursor];
   document.getElementById("place-name-he").textContent = LANG === "he" ? r.name_he : (r.name_en || r.name_he);
-  document.getElementById("place-type").textContent =
-    `${typeLabel(r.type)} · ${categoryLabel(r.category)}`;
+  // Icon + specific type pill — replaces the old "type · category" duplication.
+  const tag = placeTag(r);
+  const tagEl = document.getElementById("place-type");
+  tagEl.className = `place-tag ${tag.klass}`;
+  tagEl.innerHTML = `<span class="place-tag-icon">${tag.icon}</span><span class="place-tag-label">${escapeHtml(tag.label)}</span>`;
+  // Progress dots (●●●○○○) instead of "Round 3 / 6" text.
+  document.getElementById("round-num").innerHTML = _renderDots(state.cursor, 6);
   document.getElementById("day-num").textContent = `#${state.dayNumber}`;
-  document.getElementById("round-num").textContent = T("round_n_of", { n: state.cursor + 1 });
   const multEl = document.getElementById("round-mult");
   multEl.textContent = `×${r.multiplier}`;
   multEl.className = `mult ${multClass(r.multiplier)}`;
-  document.getElementById("round-score").textContent = `${T("score_label")}: ${state.totalScore}`;
+  document.getElementById("round-score").textContent = state.totalScore;
   document.getElementById("hud").classList.remove("hidden");
   state.awaitingClick = true;
   document.body.classList.add("awaiting-click");
+}
+
+function _renderDots(cursor, total) {
+  let s = "";
+  for (let i = 0; i < total; i++) {
+    const cls = i < cursor ? "done" : i === cursor ? "active" : "";
+    s += `<span class="dot ${cls}"></span>`;
+  }
+  return s;
 }
 
 // ─── Click handler ──────────────────────────────────────────────────────────
