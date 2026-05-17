@@ -978,10 +978,16 @@ function spawnMagenDavid(lngLat, color = "#0038b8", maxScale = 3.2, duration = 1
   svg.setAttribute("viewBox", "-50 -50 100 100");
   // Centered on the lng/lat via absolute + negative margin (matches
   // .comet-head and .marker-dot pattern in style.css).
+  // transformOrigin + display block are critical: SVG defaults to inline
+  // and (in Chromium) transform-origin: 0 0, which would make anime's
+  // scale animation grow the hexagram from its top-left corner away from
+  // the truth point.
   Object.assign(svg.style, {
     position: "absolute", left: "0", top: "0",
     width: "70px", height: "70px",
     marginLeft: "-35px", marginTop: "-35px",
+    display: "block",
+    transformOrigin: "35px 35px",
     pointerEvents: "none", overflow: "visible",
   });
   const tri1 = document.createElementNS(svgNS, "polygon");
