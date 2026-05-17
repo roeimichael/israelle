@@ -88,6 +88,23 @@ def _daily_picks(d: str) -> list[int]:
     return picks
 
 
+def _rank_and_percentile(date_iso: str, my_score: int) -> dict:
+    """Compute the caller's rank (1-indexed) and percentile of players beaten,
+    against all scores on `date_iso`. One DB call; tiny payload (one int per row)."""
+    rows = supa.select("games", select="total_score", puzzle_date=f"eq.{date_iso}")
+    scores = [r["total_score"] for r in rows if r.get("total_score") is not None]
+    total = len(scores)
+    if total == 0:
+        return {"rank": 1, "percentile": 100, "total_players": 1}
+    higher = sum(1 for s in scores if s > my_score)
+    beaten = sum(1 for s in scores if s < my_score)
+    return {
+        "rank": higher + 1,
+        "percentile": round(100 * beaten / total),
+        "total_players": total,
+    }
+
+
 def _require_player_access(player_id: str, request: Request) -> None:
     """Reject reads of another user's data. Guests (auth_user_id NULL) stay
     open — same risk surface as before for that bucket, but signed-in users
@@ -283,13 +300,17 @@ def me_today(request: Request, hint: str | None = None):
             gs["image_url"] = p.get("image_url", "")
             gs["source_url"] = p.get("source_url", "")
     owner = next((pl for pl in players if pl["id"] == g["player_id"]), players[0])
-    return {
+    done = len(guesses) >= 6
+    payload = {
         "player_id": g["player_id"],
         "name": owner["name"],
         "total_score": g["total_score"],
         "guesses": guesses,
-        "done": len(guesses) >= 6,
+        "done": done,
     }
+    if done:
+        payload.update(_rank_and_percentile(d, g["total_score"]))
+    return payload
 
 
 @app.get("/api/today/me")
@@ -326,12 +347,16 @@ def today_me(player_id: str, request: Request):
             gs["description"] = p.get("description", "")
             gs["image_url"] = p.get("image_url", "")
             gs["source_url"] = p.get("source_url", "")
-    return {
+    done = len(guesses) >= 6
+    payload = {
         "game_id": g["id"],
         "total_score": g["total_score"],
         "guesses": guesses,
-        "done": len(guesses) >= 6,
+        "done": done,
     }
+    if done:
+        payload.update(_rank_and_percentile(date, g["total_score"]))
+    return payload
 
 
 
@@ -413,7 +438,10 @@ def today_guess(body: GuessIn, request: Request):
     total = sum(r["round_score"] for r in rows)
     supa.update("games", {"id": f"eq.{game_id}"}, {"total_score": total}, jwt=user_jwt)
 
-    return {
+    # Compute rank only on the last guess — wasted work on rounds 0-4.
+    rank_info = _rank_and_percentile(date, total) if body.round_idx == 5 else None
+
+    out = {
         "distance_km": round(dist, 2),
         "base_score": base,
         "multiplier": p["multiplier"],
@@ -431,6 +459,9 @@ def today_guess(body: GuessIn, request: Request):
         "image_url": p.get("image_url", ""),
         "source_url": p.get("source_url", ""),
     }
+    if rank_info:
+        out.update(rank_info)
+    return out
 
 
 # ─── history + leaderboard ───────────────────────────────────────────────────
@@ -520,22 +551,47 @@ def my_stats(player_id: str, request: Request):
 
 
 @app.get("/api/leaderboard")
-def leaderboard(date: str | None = None):
+def leaderboard(date: str | None = None, player_id: str | None = None):
+    """Top 10 + caller's row when they're outside the top 10."""
     date = date or _il_today_iso()
     rows = supa.select(
         "games",
-        select="total_score,completed_at,players(name)",
+        select="player_id,total_score,completed_at,players(name)",
         puzzle_date=f"eq.{date}",
         order="total_score.desc",
-        limit=20,
     )
-    out = [
-        {"name": r["players"]["name"] if r.get("players") else "אנונימי",
-         "score": r["total_score"],
-         "completed_at": r["completed_at"]}
-        for r in rows
-    ]
-    return {"date": date, "top": out}
+
+    def _name(r):
+        return (r["players"]["name"] if r.get("players") and r["players"] else "אנונימי")
+
+    top = []
+    me_in_top = False
+    for i, r in enumerate(rows[:10]):
+        is_me = bool(player_id and r["player_id"] == player_id)
+        if is_me:
+            me_in_top = True
+        top.append({
+            "rank": i + 1,
+            "name": _name(r),
+            "score": r["total_score"],
+            "completed_at": r["completed_at"],
+            "is_me": is_me,
+        })
+
+    me = None
+    if player_id and not me_in_top:
+        for i, r in enumerate(rows):
+            if r["player_id"] == player_id:
+                me = {
+                    "rank": i + 1,
+                    "name": _name(r),
+                    "score": r["total_score"],
+                    "completed_at": r["completed_at"],
+                    "is_me": True,
+                }
+                break
+
+    return {"date": date, "top": top, "me": me, "total_players": len(rows)}
 
 
 # ─── SEO: dynamic sitemap with all archive days ──────────────────────────────

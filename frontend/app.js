@@ -27,6 +27,12 @@ const STRINGS = {
     btn_share: "📋 העתק תוצאה",
     btn_share_title: "אתגרו את החברים שלכם",
     btn_share_sub: "בדקו אם מישהו יצליח לעבור אתכם",
+    btn_share_wa_title: "שתפו בוואטסאפ",
+    btn_share_wa_sub: "שלחו לחברים — אתגר ישיר",
+    rank_top: "מקום #{rank}! 🏆",
+    rank_beat: "ניצחתם {pct}% מהשחקנים היום",
+    rank_solo: "אתם הראשונים היום 🇮🇱",
+    rank_zero: "סיימתם את הפאזל היומי",
     btn_leaderboard: "🏆 לוח יומי",
     btn_archive_end: "📅 ארכיון פאזלים",
     places_title: "המקומות של היום",
@@ -124,6 +130,12 @@ const STRINGS = {
     btn_share: "📋 Copy result",
     btn_share_title: "Challenge your friends",
     btn_share_sub: "See if anyone can beat your score",
+    btn_share_wa_title: "Share on WhatsApp",
+    btn_share_wa_sub: "Send to friends — a direct challenge",
+    rank_top: "Rank #{rank}! 🏆",
+    rank_beat: "You beat {pct}% of today's players",
+    rank_solo: "You're the first one today 🇮🇱",
+    rank_zero: "Daily puzzle complete",
     btn_leaderboard: "🏆 Daily board",
     btn_archive_end: "📅 Archive",
     places_title: "Today's places",
@@ -299,6 +311,8 @@ const state = {
   _idx: null,
   // Archive mode: when ?date=YYYY-MM-DD set, play a past day stateless (no save).
   archive: null,
+  // Filled on game completion from backend rank_and_percentile (null in archive).
+  rank: null, percentile: null, totalPlayers: null,
 };
 
 // Pull ?date= from URL once; null on the live daily puzzle.
@@ -431,6 +445,7 @@ async function init() {
   document.getElementById("btn-leaderboard").onclick = openLeaderboard;
   document.getElementById("btn-lb-close").onclick = closeModal;
   document.getElementById("btn-share").onclick = onShare;
+  document.getElementById("btn-share-wa").onclick = onShareWhatsApp;
   document.getElementById("btn-name-save").onclick = onSaveName;
   document.getElementById("btn-fresh-guest").onclick = onFreshGuest;
 
@@ -546,6 +561,9 @@ async function loadTodayIntoState() {
     if (me.done) {
       state.played = me.guesses || [];
       state.totalScore = me.total_score || 0;
+      state.rank = me.rank ?? null;
+      state.percentile = me.percentile ?? null;
+      state.totalPlayers = me.total_players ?? null;
       showEnd(true);
       return true;
     }
@@ -722,6 +740,9 @@ async function beginDay() {
       state.played = me.guesses || [];
       state.totalScore = me.total_score || 0;
       state.cursor = state.played.length;
+      state.rank = me.rank ?? null;
+      state.percentile = me.percentile ?? null;
+      state.totalPlayers = me.total_players ?? null;
     }
   } catch (e) {
     flashToast(T("puzzle_load_fail"));
@@ -825,6 +846,12 @@ async function onMapClick(e) {
     res.total_score = (state.totalScore || 0) + res.round_score;
   }
   state.totalScore = res.total_score;
+  // Last-round response includes rank info (live mode only).
+  if (res.rank != null) {
+    state.rank = res.rank;
+    state.percentile = res.percentile;
+    state.totalPlayers = res.total_players;
+  }
   state.played.push({ ...res, name_he: state.rounds[state.cursor].name_he, name_en: state.rounds[state.cursor].name_en });
 
   // If we didn't have local truth (no idx, e.g. first boot before hydrate),
@@ -1033,12 +1060,38 @@ function onNext() {
 function showEnd(restored) {
   document.getElementById("emoji-strip").textContent = emojiStrip(state.played);
   renderPlacesList();
+  renderRankStrip();
   showCard("end-card");
   if (restored) {
     document.getElementById("final-score").textContent = state.totalScore;
   } else {
     countUp(document.getElementById("final-score"), 0, state.totalScore, 1500);
   }
+}
+
+function renderRankStrip() {
+  const strip = document.getElementById("rank-strip");
+  const head = document.getElementById("rank-headline");
+  const sub = document.getElementById("rank-sub");
+  // Archive mode: no leaderboard / rank info available.
+  if (state.archive || state.rank == null) {
+    strip.classList.add("hidden");
+    return;
+  }
+  strip.classList.remove("hidden");
+  const rank = state.rank;
+  const pct = state.percentile ?? 0;
+  const total = state.totalPlayers ?? 1;
+  if (rank <= 3) {
+    head.textContent = T("rank_top", { rank });
+  } else if (total === 1) {
+    head.textContent = T("rank_solo");
+  } else if (pct > 0) {
+    head.textContent = T("rank_beat", { pct });
+  } else {
+    head.textContent = T("rank_zero");
+  }
+  sub.textContent = `#${rank} / ${total}`;
 }
 
 function renderPlacesList() {
@@ -1106,7 +1159,16 @@ function buildShareText() {
     .map((g) => `${g.base_score}${scoreEmoji(g.base_score / 100)}`)
     .join(" ");
   const intro = T("share_intro", { score: state.totalScore, day: state.dayNumber });
-  return `${intro}\n\n${line}\n${location.origin}`;
+  // Optional rank brag — only when we have it (live mode, ≥2 players).
+  let rankLine = "";
+  if (!state.archive && state.rank != null && (state.totalPlayers || 0) > 1) {
+    if (state.percentile > 0) {
+      rankLine = T("rank_beat", { pct: state.percentile }) + "\n";
+    } else if (state.rank <= 3) {
+      rankLine = T("rank_top", { rank: state.rank }) + "\n";
+    }
+  }
+  return `${intro}\n${rankLine}\n${line}\n${location.origin}`;
 }
 
 async function onShare() {
@@ -1129,13 +1191,34 @@ async function onShare() {
   }
 }
 
+function onShareWhatsApp() {
+  const txt = buildShareText();
+  const url = `https://wa.me/?text=${encodeURIComponent(txt)}`;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 async function openLeaderboard() {
-  const lb = await fetch(`/api/leaderboard?date=${state.date}`).then((r) => r.json());
+  const url = `/api/leaderboard?date=${encodeURIComponent(state.date)}&player_id=${encodeURIComponent(playerId)}`;
+  const lb = await fetch(url).then((r) => r.json());
   const list = document.getElementById("lb-list");
-  list.innerHTML = lb.top.length
-    ? lb.top.map((row, i) => `<div class="lb-row"><span>#${i + 1}</span><span>${escapeHtml(row.name)}</span><b>${row.score}</b></div>`).join("")
+  const rows = (lb.top || []).map((row) => _lbRow(row));
+  if (lb.me) {
+    rows.push('<div class="lb-gap">···</div>');
+    rows.push(_lbRow(lb.me));
+  }
+  list.innerHTML = rows.length
+    ? rows.join("")
     : `<p>${T("no_lb_yet")}</p>`;
   openModal("lb-card");
+}
+
+function _lbRow(row) {
+  let cls = "lb-row";
+  if (row.is_me) cls += " lb-me";
+  if (row.rank === 1) cls += " lb-top1";
+  else if (row.rank === 2) cls += " lb-top2";
+  else if (row.rank === 3) cls += " lb-top3";
+  return `<div class="${cls}"><span class="lb-rank">#${row.rank}</span><span>${escapeHtml(row.name || "")}</span><b>${row.score}</b></div>`;
 }
 
 async function openHistory() {

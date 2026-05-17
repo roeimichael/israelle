@@ -660,6 +660,45 @@ a.place-name:hover { text-decoration: underline; }
 
 .end-meta { margin-top: 14px; text-align: center; }
 
+/* ─── Rank strip (under emoji on end-card) ─── */
+#rank-strip {
+  margin: 4px auto 14px; padding: 10px 16px;
+  background: rgba(72, 187, 120, 0.12);
+  border: 1px solid rgba(72, 187, 120, 0.35);
+  border-radius: 12px; display: inline-flex; flex-direction: column;
+  align-items: center; gap: 2px;
+}
+.rank-headline {
+  font-size: 16px; font-weight: 700; color: #5dee98; letter-spacing: 0.2px;
+}
+.rank-sub { font-size: 11px; opacity: 0.7; }
+
+/* ─── Leaderboard rows ─── */
+.lb-row {
+  display: grid; grid-template-columns: 40px 1fr auto;
+  align-items: center; gap: 12px;
+  padding: 8px 12px; border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin: 4px 0; font-size: 14px;
+  transition: background 0.15s;
+}
+.lb-row.lb-me {
+  background: rgba(77, 125, 240, 0.22);
+  border-color: rgba(77, 125, 240, 0.55);
+  font-weight: 600;
+}
+.lb-row .lb-rank { opacity: 0.65; font-variant-numeric: tabular-nums; font-size: 13px; }
+.lb-row.lb-me .lb-rank { opacity: 1; color: var(--il-blue-light); }
+.lb-row.lb-top1 .lb-rank::before { content: "🥇 "; }
+.lb-row.lb-top2 .lb-rank::before { content: "🥈 "; }
+.lb-row.lb-top3 .lb-rank::before { content: "🥉 "; }
+.lb-row b { font-variant-numeric: tabular-nums; font-size: 15px; color: var(--il-blue-light); }
+.lb-gap {
+  text-align: center; opacity: 0.4; padding: 6px 0;
+  font-size: 18px; letter-spacing: 6px; line-height: 0.5;
+}
+
 /* ─── End-card CTA (share) ─── */
 .btn-cta {
   background: linear-gradient(135deg, #0038b8 0%, #4d7df0 55%, #6f9bff 100%);
@@ -685,6 +724,20 @@ a.place-name:hover { text-decoration: underline; }
     inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .btn-cta:active { transform: translateY(0); }
+.btn-cta-wa {
+  background: linear-gradient(135deg, #128c4f 0%, #25d366 55%, #5dee98 100%);
+  background-size: 200% 200%;
+  box-shadow:
+    0 10px 24px -8px rgba(37, 211, 102, 0.55),
+    0 4px 12px -4px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.btn-cta-wa:hover {
+  box-shadow:
+    0 14px 32px -8px rgba(37, 211, 102, 0.75),
+    0 6px 16px -4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
 .btn-cta-emoji {
   font-size: 28px; line-height: 1;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));
