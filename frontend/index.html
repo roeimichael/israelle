@@ -55,7 +55,7 @@
 </script>
 
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-<link href="/static/style.css?v=20" rel="stylesheet" />
+<link href="/static/style.css?v=21" rel="stylesheet" />
 </head>
 <body>
 <!-- splash: covers everything until init resolves -->
@@ -85,7 +85,6 @@
   <div id="toolbar">
     <button class="tb-btn" id="btn-help" data-i18n-attr="title" data-i18n="btn_help_tooltip" title="איך משחקים">?</button>
     <button class="tb-btn hidden" id="btn-stats" data-i18n-attr="title" data-i18n="btn_stats_tooltip" title="סטטיסטיקות">📊</button>
-    <button class="tb-btn" id="btn-archive" data-i18n-attr="title" data-i18n="btn_archive_tooltip" title="ארכיון">📅</button>
     <button class="tb-btn" id="btn-lang" title="עברית / English">EN</button>
     <button class="tb-btn" id="btn-sound" data-i18n-attr="title" data-i18n="btn_sound_tooltip" title="צליל">🔊</button>
   </div>
@@ -185,8 +184,17 @@
     <div id="final-max" data-i18n="final_max">מתוך 1000</div>
     <div id="emoji-strip"></div>
     <div id="end-actions">
-      <button id="btn-share" data-i18n="btn_share">📋 העתק תוצאה</button>
-      <button id="btn-leaderboard" data-i18n="btn_leaderboard">🏆 לוח יומי</button>
+      <button id="btn-share" class="btn-cta">
+        <span class="btn-cta-emoji">📲</span>
+        <span class="btn-cta-text">
+          <span class="btn-cta-title" data-i18n="btn_share_title">אתגרו חברים</span>
+          <span class="btn-cta-sub" data-i18n="btn_share_sub">בדקו אם הם יעבירו את הניקוד שלכם</span>
+        </span>
+      </button>
+      <div class="end-actions-secondary">
+        <button id="btn-archive" class="btn-secondary" data-i18n="btn_archive_end">📅 ארכיון</button>
+        <button id="btn-leaderboard" class="btn-secondary" data-i18n="btn_leaderboard">🏆 לוח יומי</button>
+      </div>
     </div>
     <div id="next-cd" class="countdown"><span data-i18n="next_puzzle_in">פאזל הבא בעוד</span> <span id="cd2"></span></div>
     <h3 id="places-title" class="places-title hidden" data-i18n="places_title">המקומות של היום</h3>
@@ -285,6 +293,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/animejs@4/dist/bundles/anime.umd.min.js"></script>
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
-<script src="/static/app.js?v=32"></script>
+<script src="/static/app.js?v=33"></script>
 </body>
 </html>

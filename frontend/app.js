@@ -25,7 +25,10 @@ const STRINGS = {
     end_title: "סיום משחק",
     final_max: "מתוך 1000",
     btn_share: "📋 העתק תוצאה",
+    btn_share_title: "אתגרו את החברים שלכם",
+    btn_share_sub: "בדקו אם מישהו יצליח לעבור אתכם",
     btn_leaderboard: "🏆 לוח יומי",
+    btn_archive_end: "📅 ארכיון פאזלים",
     places_title: "המקומות של היום",
     btn_fresh_guest: "↺ התחל מחדש כאורח חדש",
     history_title: "היסטוריה",
@@ -70,7 +73,7 @@ const STRINGS = {
     sign_in_for_history: "התחברו כדי לראות היסטוריה",
     supabase_not_configured: "חיבור Supabase לא הוגדר",
     confirm_fresh_guest: "יישחק לך פאזל חדש כאורח. ההיסטוריה המקומית תאופס. להמשיך?",
-    share_intro: "בואו נראה כמה אתם מכירים את ישראל",
+    share_intro: "אני סיימתי את IsraelE #{day} עם {score}/1000 🇮🇱\nתעלו עליי?",
     share_final: "ניקוד סופי",
     copied: "הועתק ללוח",
     copy_failed: "העתקה נכשלה",
@@ -119,7 +122,10 @@ const STRINGS = {
     end_title: "Game over",
     final_max: "out of 1000",
     btn_share: "📋 Copy result",
+    btn_share_title: "Challenge your friends",
+    btn_share_sub: "See if anyone can beat your score",
     btn_leaderboard: "🏆 Daily board",
+    btn_archive_end: "📅 Archive",
     places_title: "Today's places",
     btn_fresh_guest: "↺ Start fresh as guest",
     history_title: "History",
@@ -164,7 +170,7 @@ const STRINGS = {
     sign_in_for_history: "Sign in to see your history",
     supabase_not_configured: "Supabase not configured",
     confirm_fresh_guest: "A fresh guest puzzle will start. Local history will be wiped. Continue?",
-    share_intro: "How well do you know Israel?",
+    share_intro: "I scored {score}/1000 on IsraelE #{day} 🇮🇱\nThink you can beat me?",
     share_final: "Final score",
     copied: "Copied to clipboard",
     copy_failed: "Copy failed",
@@ -1099,12 +1105,8 @@ function buildShareText() {
   const line = games
     .map((g) => `${g.base_score}${scoreEmoji(g.base_score / 100)}`)
     .join(" ");
-  return (
-    `${T("share_intro")} ${location.origin}\n` +
-    `\n` +
-    `${line}\n` +
-    `${T("share_final")}: ${state.totalScore}/1000`
-  );
+  const intro = T("share_intro", { score: state.totalScore, day: state.dayNumber });
+  return `${intro}\n\n${line}\n${location.origin}`;
 }
 
 async function onShare() {
