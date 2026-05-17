@@ -11,5 +11,5 @@ cp frontend/robots.txt public/robots.txt
 cp frontend/googlea45400d763791cc6.html public/googlea45400d763791cc6.html
 cp docs/flag.png public/docs/flag.png
 cp docs/homepage.png public/docs/homepage.png
-# Optional horizontal share card. Falls back to homepage.png in meta tags if missing.
-if [ -f docs/share.png ]; then cp docs/share.png public/docs/share.png; fi
+cp docs/share.png public/docs/share.png
+if [ -f docs/share.jpg ]; then cp docs/share.jpg public/docs/share.jpg; fi
