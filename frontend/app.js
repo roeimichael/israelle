@@ -53,6 +53,9 @@ const STRINGS = {
     btn_history_tooltip: "היסטוריה",
     btn_signout_tooltip: "התנתק מהחשבון",
     btn_help_tooltip: "איך משחקים",
+    btn_archive_tooltip: "ארכיון פאזלים",
+    archive_title: "ארכיון פאזלים",
+    archive_hint: "לחצו על תאריך כדי לשחק את הפאזל של אותו יום.",
     prompt_where: "איפה",
     where_q: "?",
     round_n_of: "סבב {n} / 6",
@@ -144,6 +147,9 @@ const STRINGS = {
     btn_history_tooltip: "History",
     btn_signout_tooltip: "Sign out",
     btn_help_tooltip: "How to play",
+    btn_archive_tooltip: "Puzzle archive",
+    archive_title: "Puzzle archive",
+    archive_hint: "Tap any date to play that day's puzzle.",
     prompt_where: "Where is",
     where_q: "?",
     round_n_of: "Round {n} / 6",
@@ -330,6 +336,10 @@ function repaintDynamic() {
   if (state.played.length && !document.getElementById("end-card").classList.contains("hidden")) {
     renderPlacesList();
   }
+  // Re-render calendar (lang-aware month + weekday names)
+  if (state._calMonth && !document.getElementById("archive-card").classList.contains("hidden")) {
+    renderCalendar();
+  }
 }
 
 // Israel-themed score emojis (5 buckets, best → worst):
@@ -424,6 +434,10 @@ async function init() {
   document.getElementById("btn-stats-close").onclick = closeModal;
   document.getElementById("btn-sound").onclick = toggleSound;
   document.getElementById("btn-lang").onclick = toggleLang;
+  document.getElementById("btn-archive").onclick = openArchive;
+  document.getElementById("btn-archive-close").onclick = closeModal;
+  document.getElementById("cal-prev").onclick = () => navCal(-1);
+  document.getElementById("cal-next").onclick = () => navCal(+1);
   document.getElementById("btn-howto-next").onclick = () => moveHowto(+1);
   document.getElementById("btn-howto-prev").onclick = () => moveHowto(-1);
   document.getElementById("btn-howto-skip").onclick = skipHowto;
@@ -1262,6 +1276,119 @@ async function openStats() {
        <div class="hist-bar" style="width:${(n / max) * 100}%">${n || ""}</div>
      </div>`).join("");
   openModal("stats-card");
+}
+
+// ─── Archive calendar ──────────────────────────────────────────────────────
+const EPOCH_ISO = "2026-05-12";
+
+function _ilTodayIso() {
+  // YYYY-MM-DD in Asia/Jerusalem regardless of viewer's TZ.
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(new Date());
+}
+
+async function openArchive() {
+  // Pre-fetch played history once for the session (signed-in users only).
+  if (session?.access_token && state._playedMap === undefined) {
+    try {
+      const h = await fetchJSON("/api/me/history", authHeaders());
+      const map = {};
+      for (const g of (h.games || [])) map[g.puzzle_date] = g.total_score;
+      state._playedMap = map;
+    } catch { state._playedMap = {}; }
+  } else if (state._playedMap === undefined) {
+    state._playedMap = {};
+  }
+  // Default month: viewing today's puzzle date, or the archived date.
+  if (!state._calMonth) {
+    const seed = state.archive || _ilTodayIso();
+    state._calMonth = new Date(seed + "T00:00:00");
+  }
+  renderCalendar();
+  openModal("archive-card");
+}
+
+function navCal(delta) {
+  const m = new Date(state._calMonth);
+  m.setDate(1);
+  m.setMonth(m.getMonth() + delta);
+  state._calMonth = m;
+  renderCalendar();
+}
+
+function _isoOf(d) {
+  // Local ISO YYYY-MM-DD (avoids UTC drift from .toISOString()).
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const da = String(d.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${da}`;
+}
+
+function renderCalendar() {
+  const m = state._calMonth;
+  const year = m.getFullYear();
+  const month = m.getMonth();
+  const todayIso = _ilTodayIso();
+  const todayD = new Date(todayIso + "T00:00:00");
+  const epochD = new Date(EPOCH_ISO + "T00:00:00");
+  const locale = LANG === "he" ? "he-IL" : "en-US";
+
+  document.getElementById("cal-month-label").textContent =
+    new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(m);
+
+  // Weekday header (Sun-Sat). Jan 4 2026 was a Sunday — use it as reference.
+  const wdFmt = new Intl.DateTimeFormat(locale, { weekday: "short" });
+  const wdNames = [];
+  for (let i = 0; i < 7; i++) {
+    wdNames.push(wdFmt.format(new Date(2026, 0, 4 + i)));
+  }
+  document.getElementById("cal-weekdays").innerHTML =
+    wdNames.map((n) => `<div>${escapeHtml(n)}</div>`).join("");
+
+  // Grid: 6 rows × 7 cols starting from Sunday on or before the 1st.
+  const first = new Date(year, month, 1);
+  const start = new Date(year, month, 1 - first.getDay());
+  const playedMap = state._playedMap || {};
+  const cells = [];
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const iso = _isoOf(d);
+    const inMonth = d.getMonth() === month;
+    const isToday = iso === todayIso;
+    const isFuture = d > todayD;
+    const isPreEpoch = d < epochD;
+    const score = playedMap[iso];
+
+    let cls = "cal-cell";
+    let dataset = "";
+    if (!inMonth) cls += " cal-out";
+    if (isPreEpoch || isFuture) {
+      cls += " cal-disabled";
+    } else {
+      cls += " cal-clickable";
+      dataset = ` data-iso="${iso}"`;
+    }
+    if (isToday) cls += " cal-today";
+    if (score != null) cls += " cal-played";
+
+    const scoreBadge = score != null ? `<span class="cal-score">${score}</span>` : "";
+    cells.push(`<div class="${cls}"${dataset}>${d.getDate()}${scoreBadge}</div>`);
+  }
+  const grid = document.getElementById("cal-grid");
+  grid.innerHTML = cells.join("");
+  grid.onclick = (e) => {
+    const cell = e.target.closest(".cal-cell");
+    if (!cell || !cell.dataset.iso) return;
+    const iso = cell.dataset.iso;
+    location.href = iso === todayIso ? "/" : `/?date=${iso}`;
+  };
+
+  // Nav bounds: can't go before EPOCH's month, can't go past current month.
+  const monthStart = new Date(year, month, 1);
+  const monthEnd = new Date(year, month + 1, 0);
+  document.getElementById("cal-prev").disabled =
+    monthStart <= new Date(epochD.getFullYear(), epochD.getMonth(), 1);
+  document.getElementById("cal-next").disabled = monthEnd >= todayD;
 }
 
 // ─── How-to-play modal ──────────────────────────────────────────────────────

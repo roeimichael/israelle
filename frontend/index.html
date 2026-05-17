@@ -55,7 +55,7 @@
 </script>
 
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-<link href="/static/style.css?v=19" rel="stylesheet" />
+<link href="/static/style.css?v=20" rel="stylesheet" />
 </head>
 <body>
 <!-- splash: covers everything until init resolves -->
@@ -85,6 +85,7 @@
   <div id="toolbar">
     <button class="tb-btn" id="btn-help" data-i18n-attr="title" data-i18n="btn_help_tooltip" title="איך משחקים">?</button>
     <button class="tb-btn hidden" id="btn-stats" data-i18n-attr="title" data-i18n="btn_stats_tooltip" title="סטטיסטיקות">📊</button>
+    <button class="tb-btn" id="btn-archive" data-i18n-attr="title" data-i18n="btn_archive_tooltip" title="ארכיון">📅</button>
     <button class="tb-btn" id="btn-lang" title="עברית / English">EN</button>
     <button class="tb-btn" id="btn-sound" data-i18n-attr="title" data-i18n="btn_sound_tooltip" title="צליל">🔊</button>
   </div>
@@ -231,6 +232,20 @@
     <button id="btn-stats-close" data-i18n="btn_close">סגור</button>
   </div>
 
+  <!-- archive calendar modal -->
+  <div id="archive-card" class="card hidden">
+    <h2 data-i18n="archive_title">ארכיון</h2>
+    <div class="cal-header">
+      <button id="cal-prev" class="cal-nav" type="button">‹</button>
+      <span id="cal-month-label"></span>
+      <button id="cal-next" class="cal-nav" type="button">›</button>
+    </div>
+    <div id="cal-weekdays" class="cal-weekdays"></div>
+    <div id="cal-grid" class="cal-grid"></div>
+    <p class="cal-hint" data-i18n="archive_hint">לחצו על תאריך כדי לשחק את הפאזל של אותו יום.</p>
+    <button id="btn-archive-close" data-i18n="btn_close">סגור</button>
+  </div>
+
   <!-- how-to-play modal -->
   <div id="howto-card" class="card hidden">
     <div id="howto-slides">
@@ -270,6 +285,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/animejs@4/dist/bundles/anime.umd.min.js"></script>
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
-<script src="/static/app.js?v=31"></script>
+<script src="/static/app.js?v=32"></script>
 </body>
 </html>

@@ -658,6 +658,59 @@ a.place-name:hover { text-decoration: underline; }
 
 .end-meta { margin-top: 14px; text-align: center; }
 
+/* ─── Calendar archive modal ─── */
+#archive-card { max-width: 380px; padding: 22px 18px; }
+.cal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 6px 0 14px; gap: 8px;
+}
+#cal-month-label { font-size: 15px; font-weight: 600; opacity: 0.95; letter-spacing: 0.3px; }
+.cal-nav {
+  background: transparent; border: 1px solid rgba(77, 125, 240, 0.3);
+  padding: 4px 12px; margin: 0; font-size: 18px; min-width: 36px;
+  border-radius: 8px; line-height: 1; font-weight: 600;
+}
+.cal-nav:disabled { opacity: 0.22; pointer-events: none; }
+.cal-weekdays, .cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+}
+.cal-weekdays {
+  margin-bottom: 6px; font-size: 10px; opacity: 0.55;
+  text-align: center; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.cal-cell {
+  aspect-ratio: 1 / 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  border-radius: 8px; font-size: 13px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  user-select: none;
+}
+.cal-cell.cal-clickable { cursor: pointer; }
+.cal-cell.cal-clickable:hover {
+  background: rgba(77, 125, 240, 0.22);
+  border-color: rgba(77, 125, 240, 0.55);
+  transform: translateY(-1px);
+}
+.cal-cell.cal-disabled { opacity: 0.2; }
+.cal-cell.cal-out { opacity: 0.35; }
+.cal-cell.cal-today {
+  background: rgba(77, 125, 240, 0.32);
+  border-color: var(--il-blue-light);
+  font-weight: 700;
+  cursor: pointer;
+}
+.cal-cell.cal-today:hover { background: rgba(77, 125, 240, 0.45); }
+.cal-cell.cal-played {
+  background: rgba(72, 187, 120, 0.18);
+  border-color: rgba(72, 187, 120, 0.45);
+}
+.cal-cell.cal-played.cal-today { background: rgba(72, 187, 120, 0.32); border-color: #48bb78; }
+.cal-score { font-size: 9px; opacity: 0.85; margin-top: 1px; line-height: 1; }
+.cal-hint { font-size: 11px; opacity: 0.55; margin: 14px 0 6px; }
+
 /* ─── EN/LTR overrides ─── */
 html[dir="ltr"] #archive-banner a::before { content: ""; }
 html[dir="ltr"] #place-name-he { unicode-bidi: plaintext; }
