@@ -955,25 +955,15 @@ function drawPolygon(geom) {
     paint: { "line-color": "#4d7df0", "line-width": 2.5, "line-opacity": 0.95, "line-blur": 0.3 } });
 }
 
-// Quadratic Bezier between two [lng,lat] points with a perpendicular offset
-// for an arc. k controls arc height (0 = straight line).
-function bezierPath(from, to, k = 0.25, steps = 140) {
-  const midX = (from[0] + to[0]) / 2;
-  const midY = (from[1] + to[1]) / 2;
-  const dx = to[0] - from[0];
-  const dy = to[1] - from[1];
-  const len = Math.sqrt(dx * dx + dy * dy) || 1;
-  const px = -dy / len, py = dx / len;       // perpendicular unit vector
-  const cx = midX + px * len * k;
-  const cy = midY + py * len * k;
+// Straight-line path between two [lng,lat] points, sampled into `steps+1`
+// points so line-gradient + dash effects have geometry to work with.
+function straightPath(from, to, steps = 80) {
   const pts = [];
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
-    const u = 1 - t;
-    pts.push([u * u * from[0] + 2 * u * t * cx + t * t * to[0],
-              u * u * from[1] + 2 * u * t * cy + t * t * to[1]]);
+    pts.push([from[0] + (to[0] - from[0]) * t,
+              from[1] + (to[1] - from[1]) * t]);
   }
-  // Force exact endpoints (kills FP residue).
   pts[0] = [from[0], from[1]];
   pts[pts.length - 1] = [to[0], to[1]];
   return pts;
@@ -985,8 +975,15 @@ function spawnMagenDavid(lngLat, color = "#0038b8", maxScale = 3.2, duration = 1
   const wrap = document.createElement("div"); wrap.className = "marker-wrap";
   const svgNS = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(svgNS, "svg");
-  svg.setAttribute("class", "magen-burst");
   svg.setAttribute("viewBox", "-50 -50 100 100");
+  // Centered on the lng/lat via absolute + negative margin (matches
+  // .comet-head and .marker-dot pattern in style.css).
+  Object.assign(svg.style, {
+    position: "absolute", left: "0", top: "0",
+    width: "70px", height: "70px",
+    marginLeft: "-35px", marginTop: "-35px",
+    pointerEvents: "none", overflow: "visible",
+  });
   const tri1 = document.createElementNS(svgNS, "polygon");
   tri1.setAttribute("points", "0,-40 34.6,20 -34.6,20");
   const tri2 = document.createElementNS(svgNS, "polygon");
@@ -1021,20 +1018,20 @@ function animateLine(from, to, durationMs = 2500) {
   }
   if (map.getSource(state.lineId)) map.removeSource(state.lineId);
 
-  const fullPath = bezierPath(from, to, 0.25, 140);
+  const fullPath = straightPath(from, to, 80);
   map.addSource(state.lineId, { type: "geojson", lineMetrics: true,
     data: { type: "Feature", geometry: { type: "LineString", coordinates: [from, from] } } });
 
-  // Outer white tallit-style glow
+  // Outer white tallit-style glow (slim — won't swallow the 22px endpoint dots).
   map.addLayer({ id: state.lineId + "-glow", type: "line", source: state.lineId,
     layout: { "line-cap": "butt", "line-join": "round" },
-    paint: { "line-color": "#ffffff", "line-width": 10, "line-opacity": 0.45, "line-blur": 5 } });
+    paint: { "line-color": "#ffffff", "line-width": 7, "line-opacity": 0.4, "line-blur": 3.5 } });
 
   // Base white ribbon with gradient reveal
   map.addLayer({ id: state.lineId + "-base", type: "line", source: state.lineId,
     layout: { "line-cap": "butt", "line-join": "round" },
     paint: {
-      "line-width": 5,
+      "line-width": 3.5,
       "line-gradient": [ "interpolate", ["linear"], ["line-progress"],
         0.0, "rgba(255,255,255,0.7)",
         0.85, "rgba(255,255,255,0.95)",
@@ -1045,7 +1042,7 @@ function animateLine(from, to, durationMs = 2500) {
   // Blue marching dashes (Israeli flag blue)
   map.addLayer({ id: state.lineId, type: "line", source: state.lineId,
     layout: { "line-cap": "butt", "line-join": "round" },
-    paint: { "line-color": "#0038b8", "line-width": 5, "line-dasharray": [0.55, 1.8], "line-opacity": 0.95 } });
+    paint: { "line-color": "#0038b8", "line-width": 3.5, "line-dasharray": [0.55, 1.8], "line-opacity": 0.95 } });
 
   // Comet head — overlay marker. Snaps to the exact bezier endpoint each frame.
   const wrap = document.createElement("div"); wrap.className = "marker-wrap";
