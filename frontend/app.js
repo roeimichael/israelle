@@ -969,48 +969,38 @@ function straightPath(from, to, steps = 80) {
   return pts;
 }
 
-// SVG Star of David that scales out from a point. Used as impact effect.
+// Star of David burst: a DIV shaped via CSS clip-path (hexagram = union of
+// two triangles). Using a DIV (not SVG) because HTML elements have a
+// reliable default transform-origin of 50% 50%, so anime's scale animation
+// grows the shape from its center on every browser. SVG would need explicit
+// transform-origin handling that varies by engine.
 function spawnMagenDavid(lngLat, color = "#0038b8", maxScale = 3.2, duration = 1400, rotateDeg = 30) {
   if (!window.anime) return;
   const wrap = document.createElement("div"); wrap.className = "marker-wrap";
-  const svgNS = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(svgNS, "svg");
-  svg.setAttribute("viewBox", "-50 -50 100 100");
-  // Centered on the lng/lat via absolute + negative margin (matches
-  // .comet-head and .marker-dot pattern in style.css).
-  // transformOrigin + display block are critical: SVG defaults to inline
-  // and (in Chromium) transform-origin: 0 0, which would make anime's
-  // scale animation grow the hexagram from its top-left corner away from
-  // the truth point.
-  Object.assign(svg.style, {
+  const star = document.createElement("div");
+  // Hexagram polygon: 12 points on a 100x100 box.
+  // Two interlocking triangles, computed so the outline is a thin star ring.
+  Object.assign(star.style, {
     position: "absolute", left: "0", top: "0",
     width: "70px", height: "70px",
     marginLeft: "-35px", marginTop: "-35px",
-    display: "block",
-    transformOrigin: "35px 35px",
-    pointerEvents: "none", overflow: "visible",
+    pointerEvents: "none",
+    background: color,
+    filter: `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 12px ${color})`,
+    clipPath:
+      "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%, 50% 0%, 50% 0%)",
   });
-  const tri1 = document.createElementNS(svgNS, "polygon");
-  tri1.setAttribute("points", "0,-40 34.6,20 -34.6,20");
-  const tri2 = document.createElementNS(svgNS, "polygon");
-  tri2.setAttribute("points", "0,40 34.6,-20 -34.6,-20");
-  for (const t of [tri1, tri2]) {
-    t.setAttribute("fill", "none");
-    t.setAttribute("stroke", color);
-    t.setAttribute("stroke-width", "3");
-    t.setAttribute("stroke-linejoin", "round");
-    t.style.filter = `drop-shadow(0 0 6px ${color})`;
-    svg.appendChild(t);
-  }
-  wrap.appendChild(svg);
+  wrap.appendChild(star);
   const m = new maplibregl.Marker({ element: wrap }).setLngLat(lngLat).addTo(map);
-  anime.animate(svg, {
-    scale: [0.2, maxScale],
-    rotate: [0, rotateDeg],
-    opacity: [1, 0],
-    duration, ease: "outCubic",
-    onComplete: () => m.remove(),
-  });
+  try {
+    anime.animate(star, {
+      scale: [0.3, maxScale],
+      rotate: [0, rotateDeg],
+      opacity: [1, 0],
+      duration, ease: "outCubic",
+      onComplete: () => m.remove(),
+    });
+  } catch (e) { console.warn("[magen]", e); setTimeout(() => m.remove(), duration); }
 }
 
 // Animated guess→truth reveal: bezier arc, white "tallit" ribbon glow,
@@ -1019,12 +1009,26 @@ function spawnMagenDavid(lngLat, color = "#0038b8", maxScale = 3.2, duration = 1
 // completion so the line cannot visually drift off the truth coord.
 function animateLine(from, to, durationMs = 2500) {
   state.lineId = "guess-line";
-  for (const id of [state.lineId, state.lineId + "-base", state.lineId + "-glow"]) {
+  const endpointSrcId = "guess-endpoints";
+  for (const id of [state.lineId, state.lineId + "-base", state.lineId + "-glow",
+                    endpointSrcId + "-glow", endpointSrcId]) {
     if (map.getLayer(id)) map.removeLayer(id);
   }
-  if (map.getSource(state.lineId)) map.removeSource(state.lineId);
+  for (const sid of [state.lineId, endpointSrcId]) {
+    if (map.getSource(sid)) map.removeSource(sid);
+  }
 
   const fullPath = straightPath(from, to, 80);
+
+  // WebGL endpoint circles in the SAME canvas as the line — guaranteed to
+  // show regardless of HTML marker rendering, and they project identically
+  // with the line so the line visibly meets a solid dot at each end.
+  map.addSource(endpointSrcId, { type: "geojson", data: {
+    type: "FeatureCollection", features: [
+      { type: "Feature", properties: { role: "guess" }, geometry: { type: "Point", coordinates: from }},
+      { type: "Feature", properties: { role: "truth" }, geometry: { type: "Point", coordinates: to }},
+    ]}});
+
   map.addSource(state.lineId, { type: "geojson", lineMetrics: true,
     data: { type: "Feature", geometry: { type: "LineString", coordinates: [from, from] } } });
 
@@ -1049,6 +1053,21 @@ function animateLine(from, to, durationMs = 2500) {
   map.addLayer({ id: state.lineId, type: "line", source: state.lineId,
     layout: { "line-cap": "butt", "line-join": "round" },
     paint: { "line-color": "#0038b8", "line-width": 3.5, "line-dasharray": [0.55, 1.8], "line-opacity": 0.95 } });
+
+  // Endpoint glow halo + solid dot (drawn LAST so they sit on top of the line).
+  map.addLayer({ id: endpointSrcId + "-glow", type: "circle", source: endpointSrcId,
+    paint: {
+      "circle-radius": 15,
+      "circle-color": ["match", ["get", "role"], "guess", "#ffb86b", "#34d399"],
+      "circle-blur": 1.0, "circle-opacity": 0.5,
+    }});
+  map.addLayer({ id: endpointSrcId, type: "circle", source: endpointSrcId,
+    paint: {
+      "circle-radius": 8,
+      "circle-color": ["match", ["get", "role"], "guess", "#ffb86b", "#34d399"],
+      "circle-stroke-color": "#ffffff",
+      "circle-stroke-width": 2.5,
+    }});
 
   // Comet head — overlay marker. Snaps to the exact bezier endpoint each frame.
   const wrap = document.createElement("div"); wrap.className = "marker-wrap";
@@ -1075,28 +1094,27 @@ function animateLine(from, to, durationMs = 2500) {
   const src = map.getSource(state.lineId);
   const obj = { t: 0 };
   return new Promise((resolve) => {
-    anime.animate(obj, {
-      t: 1, duration: durationMs, ease: "cubicBezier(.22,.61,.36,1)",
-      onUpdate: () => {
-        const last = fullPath.length - 1;
-        let idx = Math.round(obj.t * last);
-        if (idx < 1) idx = 1;
-        const slice = fullPath.slice(0, idx + 1);
-        if (idx === last) slice[slice.length - 1] = [to[0], to[1]];
-        src.setData({ type: "Feature", geometry: { type: "LineString", coordinates: slice } });
-        state.cometMarker.setLngLat(slice[slice.length - 1]);
-      },
-      onComplete: () => {
-        // Snap to truth exactly before burst.
-        src.setData({ type: "Feature", geometry: { type: "LineString", coordinates: fullPath } });
-        state.cometMarker.setLngLat(to);
-        pulse.pause?.();
+    let resolved = false;
+    const safeResolve = () => { if (!resolved) { resolved = true; resolve(); } };
+    // Hard backstop: no matter what anime.js does, resolve after duration+buffer
+    // so the caller (truth marker, ripples, fetch await) is NEVER blocked.
+    const backstop = setTimeout(safeResolve, durationMs + 200);
+
+    const finish = () => {
+      try {
+        clearTimeout(backstop);
         cancelAnimationFrame(antRaf);
-        anime.animate(headEl, {
-          scale: 2.8, opacity: 0, duration: 420, ease: "outQuad",
-          onComplete: () => { state.cometMarker?.remove(); state.cometMarker = null; },
-        });
-        // 4 staggered hexagram bursts — blue/white alternating, counter-rotating.
+        // Snap line + comet to exact truth coord.
+        try { src.setData({ type: "Feature", geometry: { type: "LineString", coordinates: fullPath } }); } catch (_) {}
+        try { state.cometMarker?.setLngLat(to); } catch (_) {}
+        try { pulse.pause?.(); } catch (_) {}
+        try {
+          anime.animate(headEl, {
+            scale: 2.8, opacity: 0, duration: 420, ease: "outQuad",
+            onComplete: () => { state.cometMarker?.remove(); state.cometMarker = null; },
+          });
+        } catch (_) { state.cometMarker?.remove(); state.cometMarker = null; }
+        // 4 staggered hexagram bursts.
         const bursts = [
           { color: "#0038b8", scale: 2.4, dur: 1100, delay: 0,   rot:  30 },
           { color: "#ffffff", scale: 3.0, dur: 1250, delay: 120, rot: -30 },
@@ -1104,10 +1122,27 @@ function animateLine(from, to, durationMs = 2500) {
           { color: "#ffffff", scale: 4.3, dur: 1550, delay: 420, rot: -30 },
         ];
         for (const b of bursts) {
-          setTimeout(() => spawnMagenDavid(to, b.color, b.scale, b.dur, b.rot), b.delay);
+          setTimeout(() => { try { spawnMagenDavid(to, b.color, b.scale, b.dur, b.rot); } catch (e) { console.warn("[burst]", e); } }, b.delay);
         }
-        resolve();
+      } catch (e) { console.warn("[animateLine.finish]", e); }
+      safeResolve();
+    };
+
+    anime.animate(obj, {
+      t: 1, duration: durationMs, ease: "cubicBezier(.22,.61,.36,1)",
+      onUpdate: () => {
+        // Guard every frame — a single throw here would prevent onComplete.
+        try {
+          const last = fullPath.length - 1;
+          let idx = Math.round(obj.t * last);
+          if (idx < 1) idx = 1;
+          const slice = fullPath.slice(0, idx + 1);
+          if (idx === last) slice[slice.length - 1] = [to[0], to[1]];
+          src.setData({ type: "Feature", geometry: { type: "LineString", coordinates: slice } });
+          state.cometMarker?.setLngLat(slice[slice.length - 1]);
+        } catch (e) { console.warn("[animateLine.onUpdate]", e); }
       },
+      onComplete: finish,
     });
   });
 }
@@ -1397,6 +1432,10 @@ function clearMarkers() {
     if (map.getLayer(state.lineId)) map.removeLayer(state.lineId);
     map.removeSource(state.lineId);
   }
+  // Endpoint circle layers (WebGL safety-net dots drawn by animateLine).
+  if (map.getLayer("guess-endpoints-glow")) map.removeLayer("guess-endpoints-glow");
+  if (map.getLayer("guess-endpoints")) map.removeLayer("guess-endpoints");
+  if (map.getSource("guess-endpoints")) map.removeSource("guess-endpoints");
   state.lineId = null;
   clearPolygon();
 }
