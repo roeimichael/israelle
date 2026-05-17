@@ -589,13 +589,13 @@ function animateCardIn(cardId) {
   const card = document.getElementById(cardId);
   if (!card || card.classList.contains("hidden")) return;
   card.style.opacity = "0";
-  card.style.transform = "translateY(18px) scale(0.96)";
+  card.style.transform = "translateY(12px) scale(0.98)";
   anime.animate(card, {
     opacity: 1,
     translateY: 0,
     scale: 1,
-    duration: 520,
-    ease: "outCubic",
+    duration: 280,
+    ease: "outQuart",
   });
 }
 
@@ -772,6 +772,7 @@ async function loadRound() {
   document.getElementById("round-score").textContent = `${T("score_label")}: ${state.totalScore}`;
   document.getElementById("hud").classList.remove("hidden");
   state.awaitingClick = true;
+  document.body.classList.add("awaiting-click");
 }
 
 // ─── Click handler ──────────────────────────────────────────────────────────
@@ -796,6 +797,7 @@ async function onMapClick(e) {
     return;
   }
   state.awaitingClick = false;
+  document.body.classList.remove("awaiting-click");
   chime(420);
 
   state.guessMarker = new maplibregl.Marker({ element: makeDot("guess") })
@@ -1520,7 +1522,10 @@ function toggleSoundToast() {
 }
 function applyToggleVisuals() {
   const s = document.getElementById("btn-sound");
-  if (s) s.textContent = soundOn ? "🔊" : "🔇";
+  if (s) {
+    s.textContent = soundOn ? "🔊" : "🔇";
+    s.classList.toggle("sound-off", !soundOn);
+  }
 }
 
 // ─── Sound (Web Audio chime) ────────────────────────────────────────────────

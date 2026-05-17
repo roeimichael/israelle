@@ -11,14 +11,25 @@
   --truth: var(--il-blue-light);
 }
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body {
   margin: 0; height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
   color: var(--text);
 }
-body { background: var(--bg); }
+body { background: var(--bg); overscroll-behavior: none; }
 .hidden { display: none !important; }
+
+/* Keyboard a11y: visible focus rings on interactive controls only. */
+:focus { outline: none; }
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--il-blue-light);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
 
 #map { position: absolute; inset: 0; }
 
@@ -150,10 +161,12 @@ button {
   background: var(--il-blue); color: var(--il-white); border: none;
   padding: 13px 32px; font-size: 16px; font-weight: 600;
   border-radius: 10px; cursor: pointer; margin-top: 18px;
-  transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
+  transition: transform 0.12s ease, box-shadow 0.2s, background 0.2s;
+  user-select: none;
 }
 button:hover { background: var(--il-blue-light); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(77, 125, 240, 0.4); }
-button:active { transform: translateY(0); }
+button:active { transform: scale(0.97); transition-duration: 0.04s; }
+button:disabled { cursor: not-allowed; opacity: 0.5; transform: none; box-shadow: none; }
 
 /* ─── Multiplier legend ─── */
 .mult-legend {
@@ -227,12 +240,13 @@ button:active { transform: translateY(0); }
   padding-inline-start: 8px;
 }
 .reveal-source {
-  display: inline-block; font-size: 11px; color: var(--il-blue-light);
-  text-decoration: none; margin: 0 0 8px;
-  padding: 2px 8px; border-radius: 6px;
-  border: 1px solid rgba(77, 125, 240, 0.3);
-  transition: background 0.15s, border-color 0.15s;
+  display: inline-block; font-size: 12px; color: var(--il-blue-light);
+  text-decoration: none; margin: 4px 0 8px;
+  padding: 6px 12px; border-radius: 8px;
+  border: 1px solid rgba(77, 125, 240, 0.35);
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
+.reveal-source:active { transform: scale(0.96); }
 .reveal-source:hover { background: rgba(77, 125, 240, 0.12); border-color: rgba(77, 125, 240, 0.6); }
 a.place-name { text-decoration: none; }
 a.place-name:hover { text-decoration: underline; }
@@ -285,6 +299,12 @@ a.place-name:hover { text-decoration: underline; }
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 10px; padding: 8px; overflow: hidden;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.place-tile:hover {
+  background: rgba(77, 125, 240, 0.08);
+  border-color: rgba(77, 125, 240, 0.3);
+  transform: translateY(-1px);
 }
 .place-img {
   flex-shrink: 0; width: 56px; height: 56px;
@@ -470,18 +490,27 @@ a.place-name:hover { text-decoration: underline; }
 }
 #name-input:focus { outline: none; border-color: var(--il-blue-light); }
 
-/* History + leaderboard rows */
-.hist-row, .lb-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 8px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  font-size: 14px;
+/* History rows (leaderboard rows defined separately near the calendar block) */
+.hist-row {
+  display: grid; grid-template-columns: 1fr auto;
+  align-items: center; gap: 12px;
+  padding: 9px 12px; margin: 4px 0;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px; font-size: 14px;
+  transition: background 0.15s, border-color 0.15s;
 }
-.hist-row:last-child, .lb-row:last-child { border-bottom: none; }
-.hist-row b, .lb-row b { color: var(--il-blue-light); }
-.lb-row span:first-child { opacity: 0.5; min-width: 28px; }
-#history-list, #lb-list { max-height: 360px; overflow-y: auto; margin: 14px 0; text-align: right; }
-
-#toast[data-kind="ok"] { background: rgba(72, 187, 120, 0.96); }
+.hist-row a { color: var(--text); text-decoration: none; font-variant-numeric: tabular-nums; }
+.hist-row:hover { background: rgba(77, 125, 240, 0.15); border-color: rgba(77, 125, 240, 0.4); }
+.hist-row b { color: var(--il-blue-light); font-variant-numeric: tabular-nums; }
+#history-list, #lb-list {
+  max-height: 360px; overflow-y: auto; margin: 14px 0;
+  scrollbar-width: thin; scrollbar-color: rgba(77,125,240,0.3) transparent;
+}
+#history-list::-webkit-scrollbar, #lb-list::-webkit-scrollbar { width: 4px; }
+#history-list::-webkit-scrollbar-thumb, #lb-list::-webkit-scrollbar-thumb {
+  background: rgba(77,125,240,0.3); border-radius: 2px;
+}
 
 #day-num { color: var(--il-blue-light); font-weight: 700; }
 
@@ -500,16 +529,32 @@ a.place-name:hover { text-decoration: underline; }
 
 /* ─── Spinner ────────────────────────────────────────────────────────── */
 #spinner {
-  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: rgba(8, 10, 14, 0.5); z-index: 30; backdrop-filter: blur(2px);
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column; gap: 12px;
+  align-items: center; justify-content: center;
+  background: rgba(8, 10, 14, 0.55); z-index: 30; backdrop-filter: blur(2px);
 }
 .spinner-ring {
-  width: 48px; height: 48px; border-radius: 50%;
-  border: 4px solid rgba(77, 125, 240, 0.2);
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 3px solid rgba(77, 125, 240, 0.2);
   border-top-color: var(--il-blue-light);
-  animation: spin 0.9s linear infinite;
+  animation: spin 0.75s cubic-bezier(0.6, 0, 0.4, 1) infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Toast ─────────────────────────────────────────────────────────── */
+#toast {
+  position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%) translateY(20px);
+  padding: 10px 18px; border-radius: 999px;
+  background: rgba(229, 62, 62, 0.96); color: #fff;
+  font-size: 13px; font-weight: 600;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  z-index: 100; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  max-width: 90vw; text-align: center;
+}
+#toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#toast[data-kind="ok"] { background: rgba(56, 168, 99, 0.96); }
 
 /* ─── Stats modal ────────────────────────────────────────────────────── */
 .stat-row {
@@ -556,8 +601,24 @@ a.place-name:hover { text-decoration: underline; }
 }
 #howto-dots .dot.on { background: var(--il-blue-light); }
 
+/* Sound off — dim the icon so users can see the state at a glance. */
+#btn-sound.sound-off { opacity: 0.45; }
+
+/* Honor accessibility preference: kill non-essential motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.05s !important;
+  }
+  .btn-cta { animation: none; }
+}
+
 /* ─── Mobile (≤ 480 px) ──────────────────────────────────────────────── */
 @media (max-width: 480px) {
+  /* Reduce expensive backdrop-filter blur on phones — saves FPS on low-end Android. */
+  .card { backdrop-filter: blur(12px) saturate(1.2); -webkit-backdrop-filter: blur(12px) saturate(1.2); }
+  #user-chip, #toolbar { backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
   /* Cards: tighter padding, slightly larger min-tap area on inputs */
   .card { padding: 18px 16px; min-width: 0; max-width: 94vw; border-radius: 16px; }
   .card h1 { font-size: 28px; }
@@ -636,6 +697,9 @@ a.place-name:hover { text-decoration: underline; }
 .maplibregl-map, .maplibregl-canvas { touch-action: pan-x pan-y pinch-zoom; }
 .maplibregl-ctrl-attrib { font-size: 10px; opacity: 0.55; }
 
+/* Crosshair cursor on the map while a guess is awaited (signals affordance). */
+body.awaiting-click .maplibregl-canvas { cursor: crosshair; }
+
 /* ─── Archive banner (when viewing past day) ─── */
 #archive-banner {
   position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
@@ -671,7 +735,7 @@ a.place-name:hover { text-decoration: underline; }
 .rank-headline {
   font-size: 16px; font-weight: 700; color: #5dee98; letter-spacing: 0.2px;
 }
-.rank-sub { font-size: 11px; opacity: 0.7; }
+.rank-sub { font-size: 11px; opacity: 0.7; font-variant-numeric: tabular-nums; unicode-bidi: isolate; }
 
 /* ─── Leaderboard rows ─── */
 .lb-row {
@@ -774,8 +838,10 @@ a.place-name:hover { text-decoration: underline; }
 #cal-month-label { font-size: 15px; font-weight: 600; opacity: 0.95; letter-spacing: 0.3px; }
 .cal-nav {
   background: transparent; border: 1px solid rgba(77, 125, 240, 0.3);
-  padding: 4px 12px; margin: 0; font-size: 18px; min-width: 36px;
+  padding: 6px 14px; margin: 0; font-size: 18px;
+  min-width: 44px; min-height: 40px;
   border-radius: 8px; line-height: 1; font-weight: 600;
+  color: var(--text);
 }
 .cal-nav:disabled { opacity: 0.22; pointer-events: none; }
 .cal-weekdays, .cal-grid {
