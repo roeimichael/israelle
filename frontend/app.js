@@ -362,7 +362,7 @@ function repaintDynamic() {
     const tag = placeTag(r);
     const tagEl = document.getElementById("place-type");
     tagEl.className = `place-tag ${tag.klass}`;
-    tagEl.innerHTML = `<span class="place-tag-icon">${tag.icon}</span><span class="place-tag-label">${escapeHtml(tag.label)}</span>`;
+    tagEl.textContent = tag.label;
     document.getElementById("round-score").textContent = state.totalScore;
   }
   // Re-render reveal place name if visible
@@ -791,11 +791,11 @@ async function beginDay() {
 async function loadRound() {
   const r = state.rounds[state.cursor];
   document.getElementById("place-name-he").textContent = LANG === "he" ? r.name_he : (r.name_en || r.name_he);
-  // Icon + specific type pill — replaces the old "type · category" duplication.
+  // Type pill — color-tinted by multiplier category, no icon.
   const tag = placeTag(r);
   const tagEl = document.getElementById("place-type");
   tagEl.className = `place-tag ${tag.klass}`;
-  tagEl.innerHTML = `<span class="place-tag-icon">${tag.icon}</span><span class="place-tag-label">${escapeHtml(tag.label)}</span>`;
+  tagEl.textContent = tag.label;
   // Progress dots (●●●○○○) instead of "Round 3 / 6" text.
   document.getElementById("round-num").innerHTML = _renderDots(state.cursor, 6);
   document.getElementById("day-num").textContent = `#${state.dayNumber}`;
