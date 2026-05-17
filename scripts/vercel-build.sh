@@ -8,6 +8,7 @@ cp frontend/manifest.json public/manifest.json
 cp frontend/privacy.html public/privacy.html
 cp frontend/terms.html public/terms.html
 cp frontend/robots.txt public/robots.txt
+cp frontend/googlea45400d763791cc6.html public/googlea45400d763791cc6.html
 cp docs/flag.png public/docs/flag.png
 cp docs/homepage.png public/docs/homepage.png
 # Optional horizontal share card. Falls back to homepage.png in meta tags if missing.
