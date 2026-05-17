@@ -29,6 +29,8 @@ const STRINGS = {
     btn_share_sub: "בדקו אם מישהו יצליח לעבור אתכם",
     btn_share_wa_title: "שתפו בוואטסאפ",
     btn_share_wa_sub: "שלחו לחברים — אתגר ישיר",
+    btn_share_wa_short: "וואטסאפ",
+    btn_share_short: "העתק / שתף",
     rank_top: "מקום #{rank}! 🏆",
     rank_beat: "ניצחתם {pct}% מהשחקנים היום",
     rank_solo: "אתם הראשונים היום 🇮🇱",
@@ -132,6 +134,8 @@ const STRINGS = {
     btn_share_sub: "See if anyone can beat your score",
     btn_share_wa_title: "Share on WhatsApp",
     btn_share_wa_sub: "Send to friends — a direct challenge",
+    btn_share_wa_short: "WhatsApp",
+    btn_share_short: "Copy / Share",
     rank_top: "Rank #{rank}! 🏆",
     rank_beat: "You beat {pct}% of today's players",
     rank_solo: "You're the first one today 🇮🇱",
@@ -1094,6 +1098,16 @@ function renderRankStrip() {
     head.textContent = T("rank_zero");
   }
   sub.textContent = `#${rank} / ${total}`;
+  // Color tier: gold → green → blue → yellow → orange → red. Pure percentile,
+  // but rank<=3 forces gold regardless so podium feels podium.
+  strip.classList.remove("tier-gold", "tier-green", "tier-blue", "tier-yellow", "tier-orange", "tier-red");
+  let tier = "tier-red";
+  if (rank <= 3) tier = "tier-gold";
+  else if (pct >= 80) tier = "tier-green";
+  else if (pct >= 60) tier = "tier-blue";
+  else if (pct >= 40) tier = "tier-yellow";
+  else if (pct >= 20) tier = "tier-orange";
+  strip.classList.add(tier);
 }
 
 function renderPlacesList() {
@@ -1145,14 +1159,13 @@ function scoreEmoji(pct) {
 }
 
 function emojiStrip(played) {
+  // "base_score + emoji" per round, joined by a thin space.
+  // Was emoji-only before; numbers make the result more skimmable in shares too.
   return played
     .slice()
     .sort((a, b) => a.round_idx - b.round_idx)
-    .map((g) => {
-      const max = 100 * (g.multiplier || state.rounds[g.round_idx]?.multiplier || 1);
-      return scoreEmoji(g.round_score / max);
-    })
-    .join(" ");
+    .map((g) => `${g.base_score}${scoreEmoji(g.base_score / 100)}`)
+    .join("  ");
 }
 
 function buildShareText() {

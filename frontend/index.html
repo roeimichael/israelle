@@ -55,7 +55,7 @@
 </script>
 
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-<link href="/static/style.css?v=23" rel="stylesheet" />
+<link href="/static/style.css?v=24" rel="stylesheet" />
 </head>
 <body>
 <!-- splash: covers everything until init resolves -->
@@ -188,20 +188,17 @@
       <span class="rank-sub" id="rank-sub"></span>
     </div>
     <div id="end-actions">
-      <button id="btn-share-wa" class="btn-cta btn-cta-wa">
-        <span class="btn-cta-emoji">💬</span>
-        <span class="btn-cta-text">
-          <span class="btn-cta-title" data-i18n="btn_share_wa_title">שתפו בוואטסאפ</span>
-          <span class="btn-cta-sub" data-i18n="btn_share_wa_sub">שלחו לחברים — אתגר ישיר</span>
-        </span>
-      </button>
-      <button id="btn-share" class="btn-cta">
-        <span class="btn-cta-emoji">📲</span>
-        <span class="btn-cta-text">
-          <span class="btn-cta-title" data-i18n="btn_share_title">אתגרו חברים</span>
-          <span class="btn-cta-sub" data-i18n="btn_share_sub">בדקו אם הם יעבירו את הניקוד שלכם</span>
-        </span>
-      </button>
+      <div class="share-row">
+        <button id="btn-share-wa" class="btn-cta btn-cta-wa" data-i18n-attr="title" data-i18n="btn_share_wa_title" title="שתפו בוואטסאפ">
+          <span class="btn-cta-emoji">💬</span>
+          <span class="btn-cta-title" data-i18n="btn_share_wa_short">וואטסאפ</span>
+        </button>
+        <button id="btn-share" class="btn-cta" data-i18n-attr="title" data-i18n="btn_share_title" title="אתגרו חברים">
+          <span class="btn-cta-emoji">📲</span>
+          <span class="btn-cta-title" data-i18n="btn_share_short">העתק / שתף</span>
+        </button>
+      </div>
+      <p class="share-pitch" data-i18n="btn_share_sub">בדקו אם החברים יצליחו לעבור אתכם</p>
       <div class="end-actions-secondary">
         <button id="btn-archive" class="btn-secondary" data-i18n="btn_archive_end">📅 ארכיון</button>
         <button id="btn-leaderboard" class="btn-secondary" data-i18n="btn_leaderboard">🏆 לוח יומי</button>
@@ -304,6 +301,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/animejs@4/dist/bundles/anime.umd.min.js"></script>
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
-<script src="/static/app.js?v=35"></script>
+<script src="/static/app.js?v=36"></script>
 </body>
 </html>
