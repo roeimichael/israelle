@@ -969,12 +969,10 @@ function straightPath(from, to, steps = 80) {
   return pts;
 }
 
-// Star of David burst: a DIV containing the Unicode ✡ glyph, styled large
-// and colored. HTML elements have a reliable default transform-origin of
-// 50% 50% across all browsers, so anime's scale animation grows the star
-// from its center on the truth point.
+// Star of David burst: Unicode ✡ glyph in a styled div, animated with raw
+// requestAnimationFrame — no anime.js dependency, so it cannot be killed
+// by v4 syntax incompatibilities.
 function spawnMagenDavid(lngLat, color = "#0038b8", maxScale = 3.2, duration = 1400, rotateDeg = 30) {
-  if (!window.anime) return;
   const wrap = document.createElement("div"); wrap.className = "marker-wrap";
   const star = document.createElement("div");
   star.textContent = "✡";
@@ -983,28 +981,33 @@ function spawnMagenDavid(lngLat, color = "#0038b8", maxScale = 3.2, duration = 1
     width: "60px", height: "60px",
     marginLeft: "-30px", marginTop: "-30px",
     fontSize: "60px", lineHeight: "60px", textAlign: "center",
-    fontFamily: "'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Sans Symbols', sans-serif",
+    fontFamily: "'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Sans Symbols', 'Arial Unicode MS', sans-serif",
     color,
-    textShadow: `0 0 8px ${color}, 0 0 16px ${color}, 0 0 24px rgba(255,255,255,0.5)`,
+    textShadow: `0 0 8px ${color}, 0 0 16px ${color}, 0 0 28px rgba(255,255,255,0.6)`,
     pointerEvents: "none",
     userSelect: "none",
-    willChange: "transform, opacity",
+    transformOrigin: "30px 30px",
+    transform: "scale(0.3) rotate(0deg)",
+    opacity: "1",
   });
   wrap.appendChild(star);
   const m = new maplibregl.Marker({ element: wrap }).setLngLat(lngLat).addTo(map);
-  console.log("[magen] spawn", lngLat, color, "scale→" + maxScale);
-  try {
-    anime.animate(star, {
-      scale: [0.3, maxScale],
-      rotate: [0, rotateDeg],
-      opacity: [1, 0],
-      duration, ease: "outCubic",
-      onComplete: () => m.remove(),
-    });
-  } catch (e) {
-    console.warn("[magen] anime failed", e);
-    setTimeout(() => m.remove(), duration);
+
+  const start = performance.now();
+  const initialScale = 0.3;
+  const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+  function tick(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const e = easeOutCubic(t);
+    const s = initialScale + (maxScale - initialScale) * e;
+    const r = rotateDeg * e;
+    const a = 1 - e;
+    star.style.transform = `scale(${s}) rotate(${r}deg)`;
+    star.style.opacity = String(a);
+    if (t < 1) requestAnimationFrame(tick);
+    else m.remove();
   }
+  requestAnimationFrame(tick);
 }
 
 // Animated guess→truth reveal: bezier arc, white "tallit" ribbon glow,
@@ -1133,7 +1136,7 @@ function animateLine(from, to, durationMs = 2500) {
     };
 
     anime.animate(obj, {
-      t: 1, duration: durationMs, ease: "cubicBezier(.22,.61,.36,1)",
+      t: 1, duration: durationMs, ease: "outQuart",
       onUpdate: () => {
         // Guard every frame — a single throw here would prevent onComplete.
         try {
