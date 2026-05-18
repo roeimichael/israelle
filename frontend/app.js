@@ -1003,10 +1003,10 @@ function spawnMagenDavid(lngLat, color = "#0038b8", maxScreenRadius = 80, durati
   } catch (e) { console.warn("[magen] layer add", e); return; }
 
   const start = performance.now();
-  const initialR = 12;
+  const initialR = 28;                          // start big enough to be seen instantly
   function tick(now) {
     const t = Math.min(1, (now - start) / duration);
-    const e = 1 - Math.pow(1 - t, 3);
+    const e = 1 - Math.pow(1 - t, 4);           // easeOutQuart — snappier than cubic
     const r = initialR + (maxScreenRadius - initialR) * e;
     const rot = rotateDeg * e * Math.PI / 180;
     const alpha = 1 - e;
@@ -1091,14 +1091,21 @@ function animateLine(from, to, durationMs = 2500) {
       "circle-stroke-width": 2.5,
     }});
 
-  // Comet head — overlay marker. Snaps to the exact bezier endpoint each frame.
-  const wrap = document.createElement("div"); wrap.className = "marker-wrap";
-  const headEl = document.createElement("div"); headEl.className = "comet-head";
-  headEl.style.background = "radial-gradient(circle, #ffffff 0%, #cfe0ff 50%, #0038b8 100%)";
-  headEl.style.boxShadow = "0 0 22px 7px rgba(0,56,184,0.9), 0 0 44px 12px rgba(255,255,255,0.45)";
-  wrap.appendChild(headEl);
-  state.cometMarker = new maplibregl.Marker({ element: wrap }).setLngLat(from).addTo(map);
-  const pulse = anime.animate(headEl, { scale: 1.2, duration: 460, ease: "inOutSine", loop: true, alternate: true });
+  // Comet head — WebGL circle layer (not HTML marker; HTML overlays don't
+  // render reliably on this setup). One Point feature whose coords are
+  // updated each frame in onUpdate to follow the line tip.
+  const cometSrcId = "comet-head";
+  if (map.getLayer(cometSrcId)) map.removeLayer(cometSrcId);
+  if (map.getLayer(cometSrcId + "-glow")) map.removeLayer(cometSrcId + "-glow");
+  if (map.getSource(cometSrcId)) map.removeSource(cometSrcId);
+  map.addSource(cometSrcId, { type: "geojson",
+    data: { type: "Feature", geometry: { type: "Point", coordinates: from } }});
+  map.addLayer({ id: cometSrcId + "-glow", type: "circle", source: cometSrcId,
+    paint: { "circle-radius": 22, "circle-color": "#0038b8", "circle-blur": 1.2, "circle-opacity": 0.7 }});
+  map.addLayer({ id: cometSrcId, type: "circle", source: cometSrcId,
+    paint: { "circle-radius": 8, "circle-color": "#ffffff",
+             "circle-stroke-color": "#0038b8", "circle-stroke-width": 2 }});
+  const cometSrc = map.getSource(cometSrcId);
 
   // Marching-dash loop
   const dash = 0.55, gap = 1.8, precision = 1 / 40;
@@ -1126,22 +1133,34 @@ function animateLine(from, to, durationMs = 2500) {
       try {
         clearTimeout(backstop);
         cancelAnimationFrame(antRaf);
-        // Snap line + comet to exact truth coord.
+        // Snap line to exact truth coord and dismiss the comet circle.
         try { src.setData({ type: "Feature", geometry: { type: "LineString", coordinates: fullPath } }); } catch (_) {}
-        try { state.cometMarker?.setLngLat(to); } catch (_) {}
-        try { pulse.pause?.(); } catch (_) {}
-        try {
-          anime.animate(headEl, {
-            scale: 2.8, opacity: 0, duration: 420, ease: "outQuad",
-            onComplete: () => { state.cometMarker?.remove(); state.cometMarker = null; },
-          });
-        } catch (_) { state.cometMarker?.remove(); state.cometMarker = null; }
-        // 4 staggered hexagram bursts. radius = peak ring size in screen pixels.
+        try { cometSrc?.setData({ type: "Feature", geometry: { type: "Point", coordinates: to } }); } catch (_) {}
+        // Fade the comet glow out over a few hundred ms via paint-property tween.
+        const fadeStart = performance.now();
+        const fadeDur = 320;
+        (function fade() {
+          const t = Math.min(1, (performance.now() - fadeStart) / fadeDur);
+          try {
+            if (map.getLayer(cometSrcId)) map.setPaintProperty(cometSrcId, "circle-opacity", 1 - t);
+            if (map.getLayer(cometSrcId + "-glow")) map.setPaintProperty(cometSrcId + "-glow", "circle-opacity", 0.7 * (1 - t));
+          } catch (_) {}
+          if (t < 1) requestAnimationFrame(fade);
+          else {
+            try {
+              if (map.getLayer(cometSrcId)) map.removeLayer(cometSrcId);
+              if (map.getLayer(cometSrcId + "-glow")) map.removeLayer(cometSrcId + "-glow");
+              if (map.getSource(cometSrcId)) map.removeSource(cometSrcId);
+            } catch (_) {}
+          }
+        })();
+        // 4 staggered hexagram bursts — snappy: start big, short duration,
+        // tight delays so they read as one bloom right at line-end.
         const bursts = [
-          { color: "#0038b8", radius:  70, dur: 1100, delay: 0,   rot:  30 },
-          { color: "#ffffff", radius:  95, dur: 1250, delay: 120, rot: -30 },
-          { color: "#0038b8", radius: 125, dur: 1400, delay: 260, rot:  30 },
-          { color: "#ffffff", radius: 160, dur: 1550, delay: 420, rot: -30 },
+          { color: "#0038b8", radius:  60, dur: 650, delay:  0,  rot:  30 },
+          { color: "#ffffff", radius:  85, dur: 700, delay: 60,  rot: -30 },
+          { color: "#0038b8", radius: 115, dur: 800, delay: 130, rot:  30 },
+          { color: "#ffffff", radius: 150, dur: 900, delay: 210, rot: -30 },
         ];
         for (const b of bursts) {
           setTimeout(() => { try { spawnMagenDavid(to, b.color, b.radius, b.dur, b.rot); } catch (e) { console.warn("[burst]", e); } }, b.delay);
@@ -1161,7 +1180,7 @@ function animateLine(from, to, durationMs = 2500) {
           const slice = fullPath.slice(0, idx + 1);
           if (idx === last) slice[slice.length - 1] = [to[0], to[1]];
           src.setData({ type: "Feature", geometry: { type: "LineString", coordinates: slice } });
-          state.cometMarker?.setLngLat(slice[slice.length - 1]);
+          cometSrc?.setData({ type: "Feature", geometry: { type: "Point", coordinates: slice[slice.length - 1] } });
         } catch (e) { console.warn("[animateLine.onUpdate]", e); }
       },
       onComplete: finish,
@@ -1454,10 +1473,13 @@ function clearMarkers() {
     if (map.getLayer(state.lineId)) map.removeLayer(state.lineId);
     map.removeSource(state.lineId);
   }
-  // Endpoint circle layers (WebGL safety-net dots drawn by animateLine).
+  // Endpoint circle layers + comet WebGL circle (cleared between rounds).
   if (map.getLayer("guess-endpoints-glow")) map.removeLayer("guess-endpoints-glow");
   if (map.getLayer("guess-endpoints")) map.removeLayer("guess-endpoints");
   if (map.getSource("guess-endpoints")) map.removeSource("guess-endpoints");
+  if (map.getLayer("comet-head")) map.removeLayer("comet-head");
+  if (map.getLayer("comet-head-glow")) map.removeLayer("comet-head-glow");
+  if (map.getSource("comet-head")) map.removeSource("comet-head");
   state.lineId = null;
   clearPolygon();
 }
