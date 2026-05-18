@@ -596,6 +596,16 @@ async function loadTodayIntoState() {
       showEnd(true);
       return true;
     }
+    // Resume mid-game: server has 1-5 guesses already. Jump straight back
+    // into the next round so a refresh doesn't drop the user at the start card.
+    if (me.guesses && me.guesses.length > 0 && me.guesses.length < 6) {
+      state.played = me.guesses;
+      state.totalScore = me.total_score || 0;
+      state.cursor = me.guesses.length;
+      showCard(null);
+      await loadRound();
+      return true;
+    }
   } catch (e) {
     console.warn("puzzle load failed", e);
   }
