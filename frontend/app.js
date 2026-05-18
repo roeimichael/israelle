@@ -969,43 +969,72 @@ function straightPath(from, to, steps = 80) {
   return pts;
 }
 
-// Star of David burst: Unicode ✡ glyph in a styled div, animated with raw
-// requestAnimationFrame — no anime.js dependency, so it cannot be killed
-// by v4 syntax incompatibilities.
+// Star of David burst: drawn on a <canvas> overlaid on top of the map.
+// Bypasses maplibre's HTML marker system entirely. If the map is visible,
+// this WILL be visible — it's just 2D canvas drawing on a positioned div.
 function spawnMagenDavid(lngLat, color = "#0038b8", maxScale = 3.2, duration = 1400, rotateDeg = 30) {
-  const wrap = document.createElement("div"); wrap.className = "marker-wrap";
-  const star = document.createElement("div");
-  star.textContent = "✡";
-  Object.assign(star.style, {
+  const mapContainer = map.getCanvasContainer();
+  const dpr = window.devicePixelRatio || 1;
+  const w = mapContainer.offsetWidth;
+  const h = mapContainer.offsetHeight;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  Object.assign(canvas.style, {
     position: "absolute", left: "0", top: "0",
-    width: "60px", height: "60px",
-    marginLeft: "-30px", marginTop: "-30px",
-    fontSize: "60px", lineHeight: "60px", textAlign: "center",
-    fontFamily: "'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Sans Symbols', 'Arial Unicode MS', sans-serif",
-    color,
-    textShadow: `0 0 8px ${color}, 0 0 16px ${color}, 0 0 28px rgba(255,255,255,0.6)`,
+    width: w + "px", height: h + "px",
     pointerEvents: "none",
-    userSelect: "none",
-    transformOrigin: "30px 30px",
-    transform: "scale(0.3) rotate(0deg)",
-    opacity: "1",
+    zIndex: "5",
   });
-  wrap.appendChild(star);
-  const m = new maplibregl.Marker({ element: wrap }).setLngLat(lngLat).addTo(map);
+  mapContainer.appendChild(canvas);
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
 
   const start = performance.now();
-  const initialScale = 0.3;
-  const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+  const baseRadius = 26;     // px at scale=1
+  const initialScale = 0.4;
+
   function tick(now) {
     const t = Math.min(1, (now - start) / duration);
-    const e = easeOutCubic(t);
-    const s = initialScale + (maxScale - initialScale) * e;
-    const r = rotateDeg * e;
-    const a = 1 - e;
-    star.style.transform = `scale(${s}) rotate(${r}deg)`;
-    star.style.opacity = String(a);
+    const e = 1 - Math.pow(1 - t, 3);            // easeOutCubic
+    const scale = initialScale + (maxScale - initialScale) * e;
+    const rot = (rotateDeg * e) * Math.PI / 180;
+    const alpha = 1 - e;
+    const r = baseRadius * scale;
+
+    // lngLat → screen coords (recomputed each frame so the star sticks
+    // to the geographic point even if the user pans the map).
+    const pt = map.project(lngLat);
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.save();
+    ctx.translate(pt.x, pt.y);
+    ctx.rotate(rot);
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.lineJoin = "round";
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 14;
+
+    // Hexagram = two equilateral triangles rotated 180° relative to each other.
+    for (let tri = 0; tri < 2; tri++) {
+      const phase = tri === 0 ? -Math.PI / 2 : Math.PI / 2;
+      ctx.beginPath();
+      for (let v = 0; v < 3; v++) {
+        const a = phase + v * (2 * Math.PI / 3);
+        const x = r * Math.cos(a);
+        const y = r * Math.sin(a);
+        if (v === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.restore();
+
     if (t < 1) requestAnimationFrame(tick);
-    else m.remove();
+    else canvas.remove();
   }
   requestAnimationFrame(tick);
 }
