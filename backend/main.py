@@ -89,20 +89,50 @@ def _daily_picks(d: str) -> list[int]:
 
 
 def _rank_and_percentile(date_iso: str, my_score: int) -> dict:
-    """Compute the caller's rank (1-indexed) and percentile of players beaten,
-    against all scores on `date_iso`. One DB call; tiny payload (one int per row)."""
+    """Caller's rank, percentile beaten, and average across all of today's scores.
+    One DB call; payload is one int per game (cheap)."""
     rows = supa.select("games", select="total_score", puzzle_date=f"eq.{date_iso}")
     scores = [r["total_score"] for r in rows if r.get("total_score") is not None]
     total = len(scores)
     if total == 0:
-        return {"rank": 1, "percentile": 100, "total_players": 1}
+        return {"rank": 1, "percentile": 100, "total_players": 1, "average_score": my_score}
     higher = sum(1 for s in scores if s > my_score)
     beaten = sum(1 for s in scores if s < my_score)
     return {
         "rank": higher + 1,
         "percentile": round(100 * beaten / total),
         "total_players": total,
+        "average_score": round(sum(scores) / total),
     }
+
+
+def _current_streak(player_ids: list[str], today_iso: str) -> int:
+    """Count consecutive days ending today (or yesterday) with at least one game.
+    Accepts multiple player_ids so signed-in users with a prior guest history
+    get credit for the whole chain."""
+    from datetime import timedelta
+    if not player_ids:
+        return 0
+    ids_csv = ",".join(player_ids)
+    rows = supa.select(
+        "games",
+        select="puzzle_date",
+        player_id=f"in.({ids_csv})",
+        order="puzzle_date.desc",
+        limit=400,
+    )
+    if not rows:
+        return 0
+    dates = {r["puzzle_date"] for r in rows}
+    cur = date.fromisoformat(today_iso)
+    # If today not yet logged, count from yesterday (still a live streak).
+    if cur.isoformat() not in dates:
+        cur = cur - timedelta(days=1)
+    n = 0
+    while cur.isoformat() in dates:
+        n += 1
+        cur -= timedelta(days=1)
+    return n
 
 
 def _require_player_access(player_id: str, request: Request) -> None:
@@ -310,6 +340,7 @@ def me_today(request: Request, hint: str | None = None):
     }
     if done:
         payload.update(_rank_and_percentile(d, g["total_score"]))
+        payload["streak"] = _current_streak([p["id"] for p in players], d)
     return payload
 
 
@@ -356,6 +387,7 @@ def today_me(player_id: str, request: Request):
     }
     if done:
         payload.update(_rank_and_percentile(date, g["total_score"]))
+        payload["streak"] = _current_streak([player_id], date)
     return payload
 
 
@@ -438,8 +470,10 @@ def today_guess(body: GuessIn, request: Request):
     total = sum(r["round_score"] for r in rows)
     supa.update("games", {"id": f"eq.{game_id}"}, {"total_score": total}, jwt=user_jwt)
 
-    # Compute rank only on the last guess — wasted work on rounds 0-4.
+    # Compute rank + streak only on the last guess — wasted work on rounds 0-4.
     rank_info = _rank_and_percentile(date, total) if body.round_idx == 5 else None
+    if rank_info is not None:
+        rank_info["streak"] = _current_streak([body.player_id], date)
 
     out = {
         "distance_km": round(dist, 2),

@@ -831,6 +831,26 @@ body.awaiting-click .maplibregl-canvas { cursor: crosshair; }
 .rank-headline { font-size: 14px; font-weight: 700; letter-spacing: 0.2px; }
 .rank-sub { font-size: 11px; opacity: 0.85; font-variant-numeric: tabular-nums; unicode-bidi: isolate; }
 .rank-sub::before { content: "·"; opacity: 0.4; margin-inline-end: 6px; }
+.rank-streak {
+  font-size: 12px; font-weight: 700;
+  padding: 2px 9px; border-radius: 999px;
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #ffb86b; unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+  margin-inline-start: 4px;
+}
+
+/* Today's average comparison line, under the score */
+#avg-line {
+  font-size: 12px; opacity: 0.7;
+  margin: -4px 0 10px; letter-spacing: 0.2px;
+  unicode-bidi: isolate;
+}
+#avg-line .avg-text { font-variant-numeric: tabular-nums; }
+#avg-line .avg-delta { font-weight: 700; margin-inline-start: 6px; font-variant-numeric: tabular-nums; }
+#avg-line .delta-pos { color: #5dee98; }
+#avg-line .delta-neg { color: #ff8585; }
 
 #rank-strip.tier-gold {
   background: rgba(237, 175, 65, 0.16); border-color: rgba(237, 175, 65, 0.55);

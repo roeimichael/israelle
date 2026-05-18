@@ -35,6 +35,11 @@ const STRINGS = {
     rank_beat: "ניצחתם {pct}% מהשחקנים היום",
     rank_solo: "אתם הראשונים היום 🇮🇱",
     rank_zero: "סיימתם את הפאזל היומי",
+    streak_days: "🔥 רצף של {n} ימים",
+    streak_one: "🔥 יום ראשון ברצף",
+    avg_today: "ממוצע היום: {avg}",
+    delta_above: "+{d} מעל הממוצע",
+    delta_below: "{d} מתחת לממוצע",
     btn_leaderboard: "🏆 לוח יומי",
     btn_archive_end: "📅 ארכיון פאזלים",
     places_title: "המקומות של היום",
@@ -141,6 +146,11 @@ const STRINGS = {
     rank_beat: "You beat {pct}% of today's players",
     rank_solo: "You're the first one today 🇮🇱",
     rank_zero: "Daily puzzle complete",
+    streak_days: "🔥 {n}-day streak",
+    streak_one: "🔥 First day in a streak",
+    avg_today: "Today's avg: {avg}",
+    delta_above: "+{d} above avg",
+    delta_below: "{d} below avg",
     btn_leaderboard: "🏆 Daily board",
     btn_archive_end: "📅 Archive",
     places_title: "Today's places",
@@ -343,6 +353,7 @@ const state = {
   archive: null,
   // Filled on game completion from backend rank_and_percentile (null in archive).
   rank: null, percentile: null, totalPlayers: null,
+  averageScore: null, streak: null,
 };
 
 // Pull ?date= from URL once; null on the live daily puzzle.
@@ -595,6 +606,8 @@ async function loadTodayIntoState() {
       state.rank = me.rank ?? null;
       state.percentile = me.percentile ?? null;
       state.totalPlayers = me.total_players ?? null;
+      state.averageScore = me.average_score ?? null;
+      state.streak = me.streak ?? null;
       showEnd(true);
       return true;
     }
@@ -784,6 +797,8 @@ async function beginDay() {
       state.rank = me.rank ?? null;
       state.percentile = me.percentile ?? null;
       state.totalPlayers = me.total_players ?? null;
+      state.averageScore = me.average_score ?? null;
+      state.streak = me.streak ?? null;
     }
   } catch (e) {
     flashToast(T("puzzle_load_fail"));
@@ -907,6 +922,8 @@ async function onMapClick(e) {
     state.rank = res.rank;
     state.percentile = res.percentile;
     state.totalPlayers = res.total_players;
+    state.averageScore = res.average_score ?? null;
+    state.streak = res.streak ?? null;
   }
   state.played.push({ ...res, name_he: state.rounds[state.cursor].name_he, name_en: state.rounds[state.cursor].name_en });
 
@@ -1308,12 +1325,29 @@ function showEnd(restored) {
   document.getElementById("emoji-strip").textContent = emojiStrip(state.played);
   renderPlacesList();
   renderRankStrip();
+  renderAvgLine();
   showCard("end-card");
   if (restored) {
     document.getElementById("final-score").textContent = state.totalScore;
   } else {
     countUp(document.getElementById("final-score"), 0, state.totalScore, 1500);
   }
+}
+
+function renderAvgLine() {
+  const el = document.getElementById("avg-line");
+  if (state.archive || state.averageScore == null) {
+    el.classList.add("hidden");
+    return;
+  }
+  const avg = state.averageScore;
+  const delta = state.totalScore - avg;
+  const deltaText = delta >= 0
+    ? T("delta_above", { d: delta })
+    : T("delta_below", { d: delta });
+  const deltaCls = delta >= 0 ? "delta-pos" : "delta-neg";
+  el.innerHTML = `<span class="avg-text">${escapeHtml(T("avg_today", { avg }))}</span> <span class="avg-delta ${deltaCls}">${escapeHtml(deltaText)}</span>`;
+  el.classList.remove("hidden");
 }
 
 function renderRankStrip() {
@@ -1339,6 +1373,16 @@ function renderRankStrip() {
     head.textContent = T("rank_zero");
   }
   sub.textContent = `#${rank} / ${total}`;
+  // Streak badge — only shown when ≥1 day streak.
+  const streakEl = document.getElementById("rank-streak");
+  if ((state.streak || 0) >= 1) {
+    streakEl.textContent = state.streak === 1
+      ? T("streak_one")
+      : T("streak_days", { n: state.streak });
+    streakEl.classList.remove("hidden");
+  } else {
+    streakEl.classList.add("hidden");
+  }
   // Color tier: gold → green → blue → yellow → orange → red. Pure percentile,
   // but rank<=3 forces gold regardless so podium feels podium.
   strip.classList.remove("tier-gold", "tier-green", "tier-blue", "tier-yellow", "tier-orange", "tier-red");
@@ -1415,16 +1459,17 @@ function buildShareText() {
     .map((g) => `${g.base_score}${scoreEmoji(g.base_score / 100)}`)
     .join(" ");
   const intro = T("share_intro", { score: state.totalScore, day: state.dayNumber });
-  // Optional rank brag — only when we have it (live mode, ≥2 players).
-  let rankLine = "";
+  // Optional brags — only when we have data (live mode, ≥2 players for rank).
+  const brag = [];
   if (!state.archive && state.rank != null && (state.totalPlayers || 0) > 1) {
-    if (state.percentile > 0) {
-      rankLine = T("rank_beat", { pct: state.percentile }) + "\n";
-    } else if (state.rank <= 3) {
-      rankLine = T("rank_top", { rank: state.rank }) + "\n";
-    }
+    if (state.percentile > 0) brag.push(T("rank_beat", { pct: state.percentile }));
+    else if (state.rank <= 3) brag.push(T("rank_top", { rank: state.rank }));
   }
-  return `${intro}\n${rankLine}\n${line}\n${location.origin}`;
+  if (!state.archive && (state.streak || 0) >= 2) {
+    brag.push(T("streak_days", { n: state.streak }));
+  }
+  const bragLine = brag.length ? brag.join(" · ") + "\n" : "";
+  return `${intro}\n${bragLine}\n${line}\n${location.origin}`;
 }
 
 async function onShare() {

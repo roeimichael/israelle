@@ -12,7 +12,7 @@
 <meta property="og:url" content="https://israel-e.com/" />
 <meta property="og:title" data-i18n-attr="content" data-i18n="site_title" content="IsraelE — פאזל יומי" />
 <meta property="og:description" data-i18n-attr="content" data-i18n="site_desc" content="כל יום 6 מקומות חדשים. סמנו במפה — ככל שיותר קרוב, יותר נקודות. עד 1000 בכל יום." />
-<meta property="og:image" content="https://israel-e.com/docs/share.png" />
+<meta property="og:image" content="https://israel-e.com/docs/share.jpg" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="IsraelE — daily Israel geography puzzle" />
@@ -24,7 +24,7 @@
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" data-i18n-attr="content" data-i18n="site_title" content="IsraelE" />
 <meta name="twitter:description" data-i18n-attr="content" data-i18n="site_desc" content="פאזל יומי של מקומות בישראל" />
-<meta name="twitter:image" content="https://israel-e.com/docs/share.png" />
+<meta name="twitter:image" content="https://israel-e.com/docs/share.jpg" />
 
 <!-- hreflang -->
 <link rel="alternate" hreflang="he" href="https://israel-e.com/?lang=he" />
@@ -55,7 +55,7 @@
 </script>
 
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-<link href="/static/style.css?v=27" rel="stylesheet" />
+<link href="/static/style.css?v=28" rel="stylesheet" />
 </head>
 <body>
 <!-- splash: covers everything until init resolves -->
@@ -183,10 +183,12 @@
     <h1 data-i18n="end_title">סיום משחק</h1>
     <div id="final-score"></div>
     <div id="final-max" data-i18n="final_max">מתוך 1000</div>
+    <div id="avg-line" class="hidden"></div>
     <div id="emoji-strip"></div>
     <div id="rank-strip" class="hidden">
       <span class="rank-headline" id="rank-headline"></span>
       <span class="rank-sub" id="rank-sub"></span>
+      <span class="rank-streak hidden" id="rank-streak"></span>
     </div>
     <div id="end-actions">
       <div class="share-row">
@@ -303,6 +305,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/animejs@4/dist/bundles/anime.umd.min.js"></script>
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
-<script src="/static/app.js?v=40"></script>
+<script src="/static/app.js?v=41"></script>
 </body>
 </html>
