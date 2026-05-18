@@ -969,72 +969,58 @@ function straightPath(from, to, steps = 80) {
   return pts;
 }
 
-// Star of David burst: drawn on a <canvas> overlaid on top of the map.
-// Bypasses maplibre's HTML marker system entirely. If the map is visible,
-// this WILL be visible — it's just 2D canvas drawing on a positioned div.
-function spawnMagenDavid(lngLat, color = "#0038b8", maxScale = 3.2, duration = 1400, rotateDeg = 30) {
-  const mapContainer = map.getCanvasContainer();
-  const dpr = window.devicePixelRatio || 1;
-  const w = mapContainer.offsetWidth;
-  const h = mapContainer.offsetHeight;
+// Build a closed hexagram (6-pointed star) LineString in lng/lat coords,
+// sized so the visible star spans `screenRadiusPx` regardless of zoom.
+// Uses map.project/unproject to translate screen-relative vertices into geo.
+function _hexagramFeature(centerLngLat, screenRadiusPx, rotateRad) {
+  const c = map.project(centerLngLat);
+  const innerR = screenRadiusPx * 0.5774;     // inner radius for a regular hexagram
+  const pts = [];
+  for (let v = 0; v < 12; v++) {
+    const r = v % 2 === 0 ? screenRadiusPx : innerR;
+    const a = rotateRad + (v * Math.PI / 6) - Math.PI / 2;
+    const sx = c.x + r * Math.cos(a);
+    const sy = c.y + r * Math.sin(a);
+    const ll = map.unproject([sx, sy]);
+    pts.push([ll.lng, ll.lat]);
+  }
+  pts.push(pts[0]);   // close the path
+  return { type: "Feature", geometry: { type: "LineString", coordinates: pts } };
+}
 
-  const canvas = document.createElement("canvas");
-  canvas.width = w * dpr;
-  canvas.height = h * dpr;
-  Object.assign(canvas.style, {
-    position: "absolute", left: "0", top: "0",
-    width: w + "px", height: h + "px",
-    pointerEvents: "none",
-    zIndex: "5",
-  });
-  mapContainer.appendChild(canvas);
-  const ctx = canvas.getContext("2d");
-  ctx.scale(dpr, dpr);
+// Star of David burst: drawn as a WebGL line layer (same primitive as the
+// ribbon line, which we know works). Hexagram geometry is recomputed each
+// frame from screen-radius via project/unproject so the star scales out
+// visually while the geo coords adapt to the current zoom/pan.
+let _magenSeq = 0;
+function spawnMagenDavid(lngLat, color = "#0038b8", maxScreenRadius = 80, duration = 1400, rotateDeg = 30) {
+  const id = "magen-" + (++_magenSeq);
+  try {
+    map.addSource(id, { type: "geojson", data: _hexagramFeature(lngLat, 5, 0) });
+    map.addLayer({ id, type: "line", source: id,
+      layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": color, "line-width": 3, "line-blur": 1.5, "line-opacity": 1 }});
+  } catch (e) { console.warn("[magen] layer add", e); return; }
 
   const start = performance.now();
-  const baseRadius = 26;     // px at scale=1
-  const initialScale = 0.4;
-
+  const initialR = 12;
   function tick(now) {
     const t = Math.min(1, (now - start) / duration);
-    const e = 1 - Math.pow(1 - t, 3);            // easeOutCubic
-    const scale = initialScale + (maxScale - initialScale) * e;
-    const rot = (rotateDeg * e) * Math.PI / 180;
+    const e = 1 - Math.pow(1 - t, 3);
+    const r = initialR + (maxScreenRadius - initialR) * e;
+    const rot = rotateDeg * e * Math.PI / 180;
     const alpha = 1 - e;
-    const r = baseRadius * scale;
-
-    // lngLat → screen coords (recomputed each frame so the star sticks
-    // to the geographic point even if the user pans the map).
-    const pt = map.project(lngLat);
-
-    ctx.clearRect(0, 0, w, h);
-    ctx.save();
-    ctx.translate(pt.x, pt.y);
-    ctx.rotate(rot);
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
-    ctx.lineJoin = "round";
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 14;
-
-    // Hexagram = two equilateral triangles rotated 180° relative to each other.
-    for (let tri = 0; tri < 2; tri++) {
-      const phase = tri === 0 ? -Math.PI / 2 : Math.PI / 2;
-      ctx.beginPath();
-      for (let v = 0; v < 3; v++) {
-        const a = phase + v * (2 * Math.PI / 3);
-        const x = r * Math.cos(a);
-        const y = r * Math.sin(a);
-        if (v === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      ctx.stroke();
-    }
-    ctx.restore();
-
+    try {
+      map.getSource(id)?.setData(_hexagramFeature(lngLat, r, rot));
+      map.setPaintProperty(id, "line-opacity", alpha);
+    } catch (_) { /* layer may have been cleared */ }
     if (t < 1) requestAnimationFrame(tick);
-    else canvas.remove();
+    else {
+      try {
+        if (map.getLayer(id)) map.removeLayer(id);
+        if (map.getSource(id)) map.removeSource(id);
+      } catch (_) {}
+    }
   }
   requestAnimationFrame(tick);
 }
@@ -1150,15 +1136,15 @@ function animateLine(from, to, durationMs = 2500) {
             onComplete: () => { state.cometMarker?.remove(); state.cometMarker = null; },
           });
         } catch (_) { state.cometMarker?.remove(); state.cometMarker = null; }
-        // 4 staggered hexagram bursts.
+        // 4 staggered hexagram bursts. radius = peak ring size in screen pixels.
         const bursts = [
-          { color: "#0038b8", scale: 2.4, dur: 1100, delay: 0,   rot:  30 },
-          { color: "#ffffff", scale: 3.0, dur: 1250, delay: 120, rot: -30 },
-          { color: "#0038b8", scale: 3.6, dur: 1400, delay: 260, rot:  30 },
-          { color: "#ffffff", scale: 4.3, dur: 1550, delay: 420, rot: -30 },
+          { color: "#0038b8", radius:  70, dur: 1100, delay: 0,   rot:  30 },
+          { color: "#ffffff", radius:  95, dur: 1250, delay: 120, rot: -30 },
+          { color: "#0038b8", radius: 125, dur: 1400, delay: 260, rot:  30 },
+          { color: "#ffffff", radius: 160, dur: 1550, delay: 420, rot: -30 },
         ];
         for (const b of bursts) {
-          setTimeout(() => { try { spawnMagenDavid(to, b.color, b.scale, b.dur, b.rot); } catch (e) { console.warn("[burst]", e); } }, b.delay);
+          setTimeout(() => { try { spawnMagenDavid(to, b.color, b.radius, b.dur, b.rot); } catch (e) { console.warn("[burst]", e); } }, b.delay);
         }
       } catch (e) { console.warn("[animateLine.finish]", e); }
       safeResolve();
