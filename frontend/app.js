@@ -969,29 +969,30 @@ function straightPath(from, to, steps = 80) {
   return pts;
 }
 
-// Star of David burst: a DIV shaped via CSS clip-path (hexagram = union of
-// two triangles). Using a DIV (not SVG) because HTML elements have a
-// reliable default transform-origin of 50% 50%, so anime's scale animation
-// grows the shape from its center on every browser. SVG would need explicit
-// transform-origin handling that varies by engine.
+// Star of David burst: a DIV containing the Unicode ✡ glyph, styled large
+// and colored. HTML elements have a reliable default transform-origin of
+// 50% 50% across all browsers, so anime's scale animation grows the star
+// from its center on the truth point.
 function spawnMagenDavid(lngLat, color = "#0038b8", maxScale = 3.2, duration = 1400, rotateDeg = 30) {
   if (!window.anime) return;
   const wrap = document.createElement("div"); wrap.className = "marker-wrap";
   const star = document.createElement("div");
-  // Hexagram polygon: 12 points on a 100x100 box.
-  // Two interlocking triangles, computed so the outline is a thin star ring.
+  star.textContent = "✡";
   Object.assign(star.style, {
     position: "absolute", left: "0", top: "0",
-    width: "70px", height: "70px",
-    marginLeft: "-35px", marginTop: "-35px",
+    width: "60px", height: "60px",
+    marginLeft: "-30px", marginTop: "-30px",
+    fontSize: "60px", lineHeight: "60px", textAlign: "center",
+    fontFamily: "'Segoe UI Symbol', 'Apple Color Emoji', 'Noto Sans Symbols', sans-serif",
+    color,
+    textShadow: `0 0 8px ${color}, 0 0 16px ${color}, 0 0 24px rgba(255,255,255,0.5)`,
     pointerEvents: "none",
-    background: color,
-    filter: `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 12px ${color})`,
-    clipPath:
-      "polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%, 50% 0%, 50% 0%)",
+    userSelect: "none",
+    willChange: "transform, opacity",
   });
   wrap.appendChild(star);
   const m = new maplibregl.Marker({ element: wrap }).setLngLat(lngLat).addTo(map);
+  console.log("[magen] spawn", lngLat, color, "scale→" + maxScale);
   try {
     anime.animate(star, {
       scale: [0.3, maxScale],
@@ -1000,7 +1001,10 @@ function spawnMagenDavid(lngLat, color = "#0038b8", maxScale = 3.2, duration = 1
       duration, ease: "outCubic",
       onComplete: () => m.remove(),
     });
-  } catch (e) { console.warn("[magen]", e); setTimeout(() => m.remove(), duration); }
+  } catch (e) {
+    console.warn("[magen] anime failed", e);
+    setTimeout(() => m.remove(), duration);
+  }
 }
 
 // Animated guess→truth reveal: bezier arc, white "tallit" ribbon glow,
