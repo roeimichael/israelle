@@ -1129,16 +1129,21 @@ function animateLine(from, to, durationMs = 2500) {
     // so the caller (truth marker, ripples, fetch await) is NEVER blocked.
     const backstop = setTimeout(safeResolve, durationMs + 200);
 
-    const finish = () => {
+    // The actual arrival effects — comet fade + 4 hexagram bursts. Called
+    // from onUpdate the moment the line is visually arrived (t > 0.9) so
+    // there's no perceptible gap between "line tip touches truth" and "boom".
+    // Idempotent via `impactFired` so onComplete's safety call is a no-op.
+    let impactFired = false;
+    const fireImpact = () => {
+      if (impactFired) return;
+      impactFired = true;
       try {
-        clearTimeout(backstop);
-        cancelAnimationFrame(antRaf);
-        // Snap line to exact truth coord and dismiss the comet circle.
+        // Snap line + comet to exact truth coord.
         try { src.setData({ type: "Feature", geometry: { type: "LineString", coordinates: fullPath } }); } catch (_) {}
         try { cometSrc?.setData({ type: "Feature", geometry: { type: "Point", coordinates: to } }); } catch (_) {}
-        // Fade the comet glow out over a few hundred ms via paint-property tween.
+        // Comet fades over 280ms while bursts bloom in parallel.
         const fadeStart = performance.now();
-        const fadeDur = 320;
+        const fadeDur = 280;
         (function fade() {
           const t = Math.min(1, (performance.now() - fadeStart) / fadeDur);
           try {
@@ -1154,8 +1159,6 @@ function animateLine(from, to, durationMs = 2500) {
             } catch (_) {}
           }
         })();
-        // 4 staggered hexagram bursts — snappy: start big, short duration,
-        // tight delays so they read as one bloom right at line-end.
         const bursts = [
           { color: "#0038b8", radius:  60, dur: 650, delay:  0,  rot:  30 },
           { color: "#ffffff", radius:  85, dur: 700, delay: 60,  rot: -30 },
@@ -1165,6 +1168,14 @@ function animateLine(from, to, durationMs = 2500) {
         for (const b of bursts) {
           setTimeout(() => { try { spawnMagenDavid(to, b.color, b.radius, b.dur, b.rot); } catch (e) { console.warn("[burst]", e); } }, b.delay);
         }
+      } catch (e) { console.warn("[animateLine.fireImpact]", e); }
+    };
+
+    const finish = () => {
+      try {
+        clearTimeout(backstop);
+        cancelAnimationFrame(antRaf);
+        fireImpact();   // safe — idempotent
       } catch (e) { console.warn("[animateLine.finish]", e); }
       safeResolve();
     };
@@ -1181,6 +1192,10 @@ function animateLine(from, to, durationMs = 2500) {
           if (idx === last) slice[slice.length - 1] = [to[0], to[1]];
           src.setData({ type: "Feature", geometry: { type: "LineString", coordinates: slice } });
           cometSrc?.setData({ type: "Feature", geometry: { type: "Point", coordinates: slice[slice.length - 1] } });
+          // outQuart at t=0.9 → line is at 99.99% visually. Fire the impact
+          // NOW so bursts bloom in lockstep with the arriving tip instead of
+          // waiting for the easing tail to finish.
+          if (obj.t > 0.9) fireImpact();
         } catch (e) { console.warn("[animateLine.onUpdate]", e); }
       },
       onComplete: finish,
