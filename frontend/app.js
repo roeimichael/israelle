@@ -410,7 +410,7 @@ const PALETTE = ["🇮🇱", "✡️", "🕊️", "🐪", "🌵"];
 
 // ─── Boot ───────────────────────────────────────────────────────────────────
 const _splashStart = performance.now();
-const MIN_SPLASH_MS = 900; // long enough to read the wordmark, short enough not to annoy
+const MIN_SPLASH_MS = 400; // just enough to read the wordmark
 
 async function init() {
   // Apply language + direction before anything visible renders.
@@ -422,8 +422,49 @@ async function init() {
     document.getElementById("archive-banner-text").textContent = T("archive_banner", { date: state.archive });
   }
 
-  // load config + supabase
-  const cfg = await fetch("/api/config").then((r) => r.json());
+  // ----- INSTANT WORK (no awaits, runs before any network) -----
+  // Identity from localStorage — no network needed.
+  playerId = localStorage.getItem("israelle_player_id");
+  if (!playerId) {
+    playerId = (crypto.randomUUID ? crypto.randomUUID() : ("p_" + Math.random().toString(36).slice(2)));
+    localStorage.setItem("israelle_player_id", playerId);
+  }
+  playerName = localStorage.getItem("israelle_player_name") || "";
+  soundOn = localStorage.getItem("israelle_sound") !== "off";
+  applyToggleVisuals();
+  renderUserChip();  // shows guest mode initially; updated when auth resolves
+
+  // ----- KICK OFF PARALLEL FETCHES -----
+  // Puzzle data is the longest network call. Start it BEFORE config + auth so
+  // both run concurrently (saves ~150ms on cold cache).
+  const puzzleP = fetchJSON(_puzzleUrl()).catch((e) => { console.warn("puzzle prefetch failed", e); return null; });
+  const cfgP = fetch("/api/config").then((r) => r.json()).catch(() => ({}));
+
+  // ----- MAP — construct immediately, load happens async in background -----
+  // Doesn't block JS; map.on("load") fires whenever tiles are ready. By then
+  // the user is usually still reading the start card.
+  map = new maplibregl.Map({
+    container: "map", style: SAT_STYLE, center: ISRAEL_CENTER,
+    zoom: 7.3, minZoom: 6, maxZoom: 18,
+    maxBounds: PAN_BOUNDS,
+    dragRotate: false, pitchWithRotate: false, touchPitch: false,
+    clickTolerance: 6,
+    fadeDuration: 80,
+  });
+  map.touchZoomRotate?.disableRotation();
+  map.on("click", onMapClick);
+  map.on("load", addIsraelMask);
+  const onPress = (e) => {
+    if (!state.awaitingClick) return;
+    const ll = e.lngLat;
+    if (!ll) return;
+    spawnRipple([ll.lng, ll.lat], "#ffffff", 1.8, 380, 1);
+  };
+  map.on("mousedown", onPress);
+  map.on("touchstart", onPress);
+
+  // ----- AUTH (awaits config, but config was fetched in parallel) -----
+  const cfg = await cfgP;
   if (cfg.supabase_url && cfg.supabase_key) {
     sb = window.supabase.createClient(cfg.supabase_url, cfg.supabase_key, {
       auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: true },
@@ -434,48 +475,10 @@ async function init() {
       const wasSignedOut = !session;
       session = s;
       renderUserChip();
-      // On sign-in (not initial load), re-check today's state under the auth
-      // identity — they may have already played today via a different
-      // browser/guest session.
-      if (evt === "SIGNED_IN" && wasSignedOut && s) {
-        resyncForAuth();
-      }
+      if (evt === "SIGNED_IN" && wasSignedOut && s) resyncForAuth();
     });
   }
   renderUserChip();
-
-  // anonymous identity (persists per-browser even when signed in)
-  playerId = localStorage.getItem("israelle_player_id");
-  if (!playerId) {
-    playerId = (crypto.randomUUID ? crypto.randomUUID() : ("p_" + Math.random().toString(36).slice(2)));
-    localStorage.setItem("israelle_player_id", playerId);
-  }
-  playerName = localStorage.getItem("israelle_player_name") || "";
-  soundOn = localStorage.getItem("israelle_sound") !== "off";
-  applyToggleVisuals();
-
-  // map
-  map = new maplibregl.Map({
-    container: "map", style: SAT_STYLE, center: ISRAEL_CENTER,
-    zoom: 7.3, minZoom: 6, maxZoom: 18,
-    maxBounds: PAN_BOUNDS,
-    dragRotate: false, pitchWithRotate: false, touchPitch: false,
-    clickTolerance: 6,             // generous tap-vs-drag threshold
-    fadeDuration: 80,              // faster style transitions
-  });
-  map.touchZoomRotate?.disableRotation();
-  map.on("click", onMapClick);
-  map.on("load", addIsraelMask);
-  // Fast tap feedback: drop a transient ripple at touch-start so the user
-  // sees something the instant they tap, while the real click event resolves.
-  const onPress = (e) => {
-    if (!state.awaitingClick) return;
-    const ll = e.lngLat;
-    if (!ll) return;
-    spawnRipple([ll.lng, ll.lat], "#ffffff", 1.8, 380, 1);
-  };
-  map.on("mousedown", onPress);
-  map.on("touchstart", onPress);
 
   // wire buttons
   document.getElementById("btn-start").onclick = onStart;
@@ -506,7 +509,8 @@ async function init() {
   document.getElementById("btn-howto-skip").onclick = skipHowto;
 
   startCountdown();
-  const alreadyDone = await loadTodayIntoState();
+  // Pass the pre-fetched puzzle so loadTodayIntoState doesn't refetch.
+  const alreadyDone = await loadTodayIntoState(await puzzleP);
 
   // render Lucide icons
   if (window.lucide?.createIcons) window.lucide.createIcons();
@@ -539,9 +543,10 @@ setTimeout(() => {
   if (s && !s.classList.contains("fading")) hideSplash();
 }, 8000);
 
-async function loadTodayIntoState() {
+async function loadTodayIntoState(preFetched) {
   try {
-    const t = await fetchJSON(_puzzleUrl());
+    const t = preFetched || await fetchJSON(_puzzleUrl());
+    if (!t) throw new Error("no puzzle data");
     state.dayNumber = t.day_number;
     state.date = t.date;
     state.rounds = t.rounds;
@@ -773,6 +778,13 @@ async function onSaveName() {
 }
 
 async function beginDay() {
+  // Fast path: init() pre-loaded state. No network on click.
+  if (state.rounds.length && state.date) {
+    if (state.played.length >= 6) { showEnd(true); return; }
+    showCard(null);
+    await loadRound();
+    return;
+  }
   showSpinner(true);
   try {
     if (state.archive) {
