@@ -178,6 +178,26 @@ def israel_border():
     return ISRAEL_BORDER
 
 
+@app.get("/api/healthz")
+def healthz():
+    """Lightweight ping. Used by Railway's healthcheck so the container stays
+    warm + by uptime monitors. Does NOT hit Supabase to keep it cheap."""
+    return {"ok": True}
+
+
+@app.on_event("startup")
+def _warmup() -> None:
+    """Open the Supabase HTTP client + do a tiny no-op query so the first user
+    request after deploy doesn't eat the TCP/TLS handshake cost (~1-2s)."""
+    try:
+        supa._c()  # initialize httpx.Client + connection pool
+        # Touch one cheap row so DNS, TLS, and PostgREST routing are all warm.
+        supa.select("places", select="id", limit=1)
+        log.info("supabase warmup ok")
+    except Exception as e:
+        log.warning("supabase warmup failed: %s", e)
+
+
 # ─── daily puzzle ────────────────────────────────────────────────────────────
 
 
