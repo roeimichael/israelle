@@ -884,7 +884,6 @@ function insideIsrael(lng, lat) {
 }
 
 async function onMapClick(e) {
-  console.log("[ils] map click", { awaiting: state.awaitingClick, confirmTap, lnglat: e.lngLat });
   if (!state.awaitingClick) return;
   const { lng, lat } = e.lngLat;
   if (!insideIsrael(lng, lat)) {
@@ -899,7 +898,6 @@ async function onMapClick(e) {
 }
 
 function setPendingGuess(lng, lat) {
-  console.log("[ils] setPendingGuess", lng, lat);
   state.pendingGuess = { lng, lat };
   if (state.pendingMarker) {
     state.pendingMarker.setLngLat([lng, lat]);
@@ -908,11 +906,9 @@ function setPendingGuess(lng, lat) {
     el.style.cssText = "width:32px;height:32px;border-radius:50%;background:#ffb86b;border:4px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,0.7),0 0 24px 4px rgba(255,184,107,1);pointer-events:none;";
     state.pendingMarker = new maplibregl.Marker({ element: el, anchor: "center" })
       .setLngLat([lng, lat]).addTo(map);
-    console.log("[ils] pending marker added", el);
   }
   spawnRipple([lng, lat], "#ffb86b", 2.4, 700, 1);
   document.getElementById("confirm-guess").classList.remove("hidden");
-  window._state = state;
 }
 
 function clearPendingGuess() {
