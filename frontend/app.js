@@ -902,11 +902,10 @@ function setPendingGuess(lng, lat) {
   if (state.pendingMarker) {
     state.pendingMarker.setLngLat([lng, lat]);
   } else {
-    state.pendingMarker = new maplibregl.Marker({ element: makeDot("guess") })
+    state.pendingMarker = new maplibregl.Marker({ element: makeDot("pending") })
       .setLngLat([lng, lat]).addTo(map);
-    popMarker(state.pendingMarker);
   }
-  spawnRipple([lng, lat], "#ffb86b", 2.2, 600, 1);
+  spawnRipple([lng, lat], "#ffb86b", 2.4, 700, 1);
   document.getElementById("confirm-guess").classList.remove("hidden");
 }
 
