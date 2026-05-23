@@ -512,6 +512,7 @@ async function init() {
   document.getElementById("btn-sound").onclick = toggleSound;
   document.getElementById("btn-confirm-tap").onclick = toggleConfirmTap;
   document.getElementById("btn-confirm-guess").onclick = onConfirmGuess;
+  wireToolbarMenu();
   document.getElementById("btn-lang").onclick = toggleLang;
   document.getElementById("btn-archive").onclick = openArchive;
   document.getElementById("btn-archive-close").onclick = closeModal;
@@ -1902,6 +1903,24 @@ function applyToggleVisuals() {
   }
   const c = document.getElementById("btn-confirm-tap");
   if (c) c.classList.toggle("on", confirmTap);
+}
+
+function wireToolbarMenu() {
+  const toolbar = document.getElementById("toolbar");
+  const burger = document.getElementById("btn-menu");
+  const close = () => {
+    toolbar.classList.remove("open");
+    burger.setAttribute("aria-expanded", "false");
+  };
+  burger.onclick = (e) => {
+    e.stopPropagation();
+    const open = toolbar.classList.toggle("open");
+    burger.setAttribute("aria-expanded", open ? "true" : "false");
+  };
+  toolbar.querySelector(".tb-items").addEventListener("click", close);
+  document.addEventListener("click", (e) => {
+    if (toolbar.classList.contains("open") && !toolbar.contains(e.target)) close();
+  });
 }
 
 function toggleConfirmTap() {

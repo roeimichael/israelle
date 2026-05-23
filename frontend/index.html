@@ -59,7 +59,7 @@
 <link rel="preconnect" href="https://unpkg.com" crossorigin />
 <link rel="preload" as="fetch" href="/api/today" crossorigin />
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
-<link href="/static/style.css?v=31" rel="stylesheet" />
+<link href="/static/style.css?v=32" rel="stylesheet" />
 </head>
 <body>
 <!-- splash: covers everything until init resolves -->
@@ -87,11 +87,14 @@
     <button id="btn-signout" data-i18n-attr="title" data-i18n="btn_signout_tooltip" data-i18n-text="btn_signout" title="התנתק מהחשבון">התנתק</button>
   </div>
   <div id="toolbar">
-    <button class="tb-btn" id="btn-help" data-i18n-attr="title" data-i18n="btn_help_tooltip" title="איך משחקים">?</button>
-    <button class="tb-btn hidden" id="btn-stats" data-i18n-attr="title" data-i18n="btn_stats_tooltip" title="סטטיסטיקות">📊</button>
-    <button class="tb-btn" id="btn-lang" title="עברית / English">EN</button>
-    <button class="tb-btn" id="btn-sound" data-i18n-attr="title" data-i18n="btn_sound_tooltip" title="צליל">🔊</button>
-    <button class="tb-btn" id="btn-confirm-tap" data-i18n-attr="title" data-i18n="btn_confirm_tap_tooltip" title="אישור לחיצה">👆</button>
+    <button class="tb-btn tb-burger" id="btn-menu" aria-label="Menu" aria-expanded="false">☰</button>
+    <div class="tb-items">
+      <button class="tb-btn" id="btn-help" data-i18n-attr="title" data-i18n="btn_help_tooltip" title="איך משחקים">?</button>
+      <button class="tb-btn hidden" id="btn-stats" data-i18n-attr="title" data-i18n="btn_stats_tooltip" title="סטטיסטיקות">📊</button>
+      <button class="tb-btn" id="btn-lang" title="עברית / English">EN</button>
+      <button class="tb-btn" id="btn-sound" data-i18n-attr="title" data-i18n="btn_sound_tooltip" title="צליל">🔊</button>
+      <button class="tb-btn" id="btn-confirm-tap" data-i18n-attr="title" data-i18n="btn_confirm_tap_tooltip" title="אישור לחיצה">👆</button>
+    </div>
   </div>
 </div>
 
@@ -314,6 +317,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/animejs@4/dist/bundles/anime.umd.min.js"></script>
 <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
-<script src="/static/app.js?v=45"></script>
+<script src="/static/app.js?v=46"></script>
 </body>
 </html>
