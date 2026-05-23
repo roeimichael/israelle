@@ -92,6 +92,10 @@ const STRINGS = {
     copy_failed: "העתקה נכשלה",
     sound_on: "צליל: פעיל",
     sound_off: "צליל: כבוי",
+    btn_confirm_tap_tooltip: "אישור לחיצה (למניעת לחיצות בטעות)",
+    btn_confirm_guess: "אישור הניחוש",
+    confirm_tap_on: "אישור לחיצה: פעיל",
+    confirm_tap_off: "אישור לחיצה: כבוי",
     no_lb_yet: "אין עדיין תוצאות.",
     no_games_yet: "עדיין לא שיחקתם.",
     info_link: "מידע נוסף ↗",
@@ -203,6 +207,10 @@ const STRINGS = {
     copy_failed: "Copy failed",
     sound_on: "Sound: on",
     sound_off: "Sound: off",
+    btn_confirm_tap_tooltip: "Tap-to-confirm (prevents accidental guesses)",
+    btn_confirm_guess: "Confirm guess",
+    confirm_tap_on: "Tap-to-confirm: on",
+    confirm_tap_off: "Tap-to-confirm: off",
     no_lb_yet: "No results yet.",
     no_games_yet: "No games yet.",
     info_link: "Read more ↗",
@@ -334,6 +342,7 @@ let sb;            // supabase client
 let session = null;
 let playerId, playerName;
 let soundOn = true;
+let confirmTap = false;
 let audioCtx;
 
 const state = {
@@ -344,6 +353,7 @@ const state = {
   date: "",
   dayNumber: 0,
   awaitingClick: false,
+  pendingGuess: null, pendingMarker: null,
   guessMarker: null, truthMarker: null, cometMarker: null,
   lineId: null, polyId: null,
   // Per-round truth coords decoded client-side from /api/today.tile_hash,
@@ -431,6 +441,7 @@ async function init() {
   }
   playerName = localStorage.getItem("israelle_player_name") || "";
   soundOn = localStorage.getItem("israelle_sound") !== "off";
+  confirmTap = localStorage.getItem("israelle_confirm_tap") === "on";
   applyToggleVisuals();
   renderUserChip();  // shows guest mode initially; updated when auth resolves
 
@@ -499,6 +510,8 @@ async function init() {
   document.getElementById("btn-stats").onclick = openStats;
   document.getElementById("btn-stats-close").onclick = closeModal;
   document.getElementById("btn-sound").onclick = toggleSound;
+  document.getElementById("btn-confirm-tap").onclick = toggleConfirmTap;
+  document.getElementById("btn-confirm-guess").onclick = onConfirmGuess;
   document.getElementById("btn-lang").onclick = toggleLang;
   document.getElementById("btn-archive").onclick = openArchive;
   document.getElementById("btn-archive-close").onclick = closeModal;
@@ -877,6 +890,44 @@ async function onMapClick(e) {
     flashToast(T("click_inside_israel"));
     return;
   }
+  if (confirmTap) {
+    setPendingGuess(lng, lat);
+    return;
+  }
+  await submitGuess(lng, lat);
+}
+
+function setPendingGuess(lng, lat) {
+  state.pendingGuess = { lng, lat };
+  if (state.pendingMarker) {
+    state.pendingMarker.setLngLat([lng, lat]);
+  } else {
+    state.pendingMarker = new maplibregl.Marker({ element: makeDot("guess") })
+      .setLngLat([lng, lat]).addTo(map);
+    popMarker(state.pendingMarker);
+  }
+  spawnRipple([lng, lat], "#ffb86b", 2.2, 600, 1);
+  document.getElementById("confirm-guess").classList.remove("hidden");
+}
+
+function clearPendingGuess() {
+  state.pendingGuess = null;
+  state.pendingMarker?.remove();
+  state.pendingMarker = null;
+  document.getElementById("confirm-guess").classList.add("hidden");
+}
+
+async function onConfirmGuess() {
+  if (!state.awaitingClick || !state.pendingGuess) return;
+  const { lng, lat } = state.pendingGuess;
+  state.pendingMarker?.remove();
+  state.pendingMarker = null;
+  state.pendingGuess = null;
+  document.getElementById("confirm-guess").classList.add("hidden");
+  await submitGuess(lng, lat);
+}
+
+async function submitGuess(lng, lat) {
   state.awaitingClick = false;
   document.body.classList.remove("awaiting-click");
   chime(420);
@@ -1551,6 +1602,9 @@ function clearMarkers() {
   state.guessMarker?.remove(); state.guessMarker = null;
   state.truthMarker?.remove(); state.truthMarker = null;
   state.cometMarker?.remove(); state.cometMarker = null;
+  state.pendingMarker?.remove(); state.pendingMarker = null;
+  state.pendingGuess = null;
+  document.getElementById("confirm-guess")?.classList.add("hidden");
   if (state.lineId && map.getSource(state.lineId)) {
     if (map.getLayer(state.lineId + "-glow")) map.removeLayer(state.lineId + "-glow");
     if (map.getLayer(state.lineId + "-base")) map.removeLayer(state.lineId + "-base");
@@ -1845,6 +1899,16 @@ function applyToggleVisuals() {
     s.textContent = soundOn ? "🔊" : "🔇";
     s.classList.toggle("sound-off", !soundOn);
   }
+  const c = document.getElementById("btn-confirm-tap");
+  if (c) c.classList.toggle("on", confirmTap);
+}
+
+function toggleConfirmTap() {
+  confirmTap = !confirmTap;
+  localStorage.setItem("israelle_confirm_tap", confirmTap ? "on" : "off");
+  applyToggleVisuals();
+  flashToast(confirmTap ? T("confirm_tap_on") : T("confirm_tap_off"), "ok");
+  if (!confirmTap) clearPendingGuess();
 }
 
 // ─── Sound (Web Audio chime) ────────────────────────────────────────────────
