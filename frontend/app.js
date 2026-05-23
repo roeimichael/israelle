@@ -904,8 +904,9 @@ function setPendingGuess(lng, lat) {
   if (state.pendingMarker) {
     state.pendingMarker.setLngLat([lng, lat]);
   } else {
-    const el = makeDot("pending");
-    state.pendingMarker = new maplibregl.Marker({ element: el })
+    const el = document.createElement("div");
+    el.style.cssText = "width:32px;height:32px;border-radius:50%;background:#ffb86b;border:4px solid #fff;box-shadow:0 0 0 2px rgba(0,0,0,0.7),0 0 24px 4px rgba(255,184,107,1);pointer-events:none;";
+    state.pendingMarker = new maplibregl.Marker({ element: el, anchor: "center" })
       .setLngLat([lng, lat]).addTo(map);
     console.log("[ils] pending marker added", el);
   }
